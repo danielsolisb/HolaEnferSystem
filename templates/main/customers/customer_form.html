@@ -1,0 +1,70 @@
+{% extends 'main/dashboard.html' %} 
+{% load static %} 
+{% load widget_tweaks %}
+
+{% block content %}
+<!--Page content-->
+<!--===================================================-->
+<div id="page-content">
+  <div class="row">
+    <div class="col-md-8 col-md-offset-2 col-sm-10 col-sm-offset-1">
+      <!--Panel para el formulario de cliente-->
+      <!--===================================================-->
+      <div class="panel">
+        <div class="panel-heading">
+          <h3 class="panel-title"><i class="demo-pli-file-jpg icon-lg"></i> Nuevo Cliente</h3>
+        </div>
+        <div class="panel-body">
+          <form method="post" class="form-horizontal">
+            {% csrf_token %}
+            
+            {% for field in form %}
+            <div class="form-group {% if field.errors %}has-error{% endif %}">
+              <label for="{{ field.id_for_label }}" class="col-sm-3 control-label">{{ field.label }}</label>
+              <div class="col-sm-9">
+                {% if field.field.widget.input_type == 'checkbox' %}
+                  <div class="checkbox">
+                    <label>
+                      {% render_field field %}
+                      {{ field.help_text }}
+                    </label>
+                  </div>
+                {% else %}
+                  {% render_field field class="form-control" %}
+                  {% if field.help_text %}
+                    <small class="help-block">{{ field.help_text }}</small>
+                  {% endif %}
+                {% endif %}
+                
+                {% if field.errors %}
+                  <div class="help-block">
+                    {% for error in field.errors %}
+                      <p class="text-danger">{{ error }}</p>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+            
+            <div class="form-group">
+              <div class="col-sm-offset-3 col-sm-9">
+                <button type="submit" class="btn btn-success btn-lg">
+                  <i class="demo-pli-computer-secure icon-fw"></i> Registrar Cliente
+                </button>
+                <a href="{% url 'customers:customer-list' %}" class="btn btn-danger btn-lg">
+                  <i class="demo-pli-cross icon-fw"></i> Cancelar
+                </a>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+      <!--===================================================-->
+      <!--End Panel-->
+    </div>
+  </div>
+</div>
+<!--===================================================-->
+<!--End page content-->
+{% endblock %}

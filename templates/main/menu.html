@@ -119,32 +119,26 @@
 						            <li class="list-header">Components</li>
 						
 						            <!--Menu list item-->
-									<li {% if title == 'Maps' %}class="active-sub"{% endif %}>
-						                <a href="{%url 'dashboard-map'%}">
-						                    <i class="demo-pli-map"></i>
-						                    <span class="menu-title">Maps</span>
-											
-						                </a>
-						            </li>
+									
 
 						            <li>
 						                <a href="#">
 						                    <i class="demo-psi-data-cloud"></i>
-						                    <span class="menu-title">Data</span>
+						                    <span class="menu-title">Clientes</span>
 											<i class="arrow"></i>
 						                </a>
 						
+						              
 						                <!--Submenu-->
 						                <ul class="collapse">
-						                    <li {% if title == 'Station Data' %}class="active-sub"{% endif %}><a href="{% url 'dashboard-station-data'%}">Station Data</a></li>
-											<li {% if title == 'Data History' %}class="active-sub"{% endif %}><a href="{% url 'dashboard-data-history'%}">Data History</a></li>
-											<li {% if title == 'Data Report' %}class="active-sub"{% endif %}><a href="{% url 'dashboard-data-report'%}">Data Report</a></li>											
+						                    <li><a href="{%url 'customers:customer-list'%}">Lista de clientes</a></li>
+											<li><a href="{%url 'customers:customer-create'%}">Nuevo Cliente</a></li>											
 						                </ul>
 						            </li>
 						
 						            <!--Menu list item-->
-						            <li {% if title == 'Monitor' %}class="active-sub"{% endif %}>
-						                <a href="{% url 'dashboard-monitor'%}">
+						            <li>
+						                <a href="#">
 						                    <i class="demo-psi-monitor-2"></i>
 						                    <span class="menu-title">Monitor</span>
 						                </a>
@@ -169,16 +163,16 @@
 						            </li>
 						
 						            <!--Menu list item-->
-						            <li {% if title == 'Settings' %}class="active-sub"{% endif %}>
-						                <a href="{% url 'dashboard-settings'%}">
+						            <li>
+						                <a href="#">
 						                    <i class="demo-pli-gear"></i>
 						                    <span class="menu-title">Settings</span>
 								    </a>					               
 						            </li>
 						
 						            <!--Menu list item-->
-						            <li {% if title == 'Support' %}class="active-sub"{% endif %}>
-						                <a href="{% url 'dashboard-support'%}">
+						            <li>
+						                <a href="#">
 						                    <i class="demo-pli-support"></i>
 						                    <span class="menu-title">Support</span>
 						                </a>

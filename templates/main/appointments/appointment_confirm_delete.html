@@ -1,0 +1,16 @@
+{% extends 'main/dashboard.html' %}
+{% block content %}
+<div class="panel">
+    <div class="panel-heading">
+        <h3 class="panel-title text-danger">Eliminar Cita</h3>
+    </div>
+    <div class="panel-body">
+        <p>¿Estás seguro de que deseas eliminar la cita de <strong>{{ appointment.paciente }}</strong>?</p>
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Eliminar</button>
+            <a href="{% url 'appointments:appointment-list' %}" class="btn btn-default">Cancelar</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

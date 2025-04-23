@@ -23,7 +23,10 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('CoreApps.main.urls')),  # URLs de main
-    path('customers/', include('CoreApps.customers.urls')),  # URLs de customers
+    path('customers/', include('CoreApps.customers.urls')),  #urls customers
+    path('catalog/', include('CoreApps.catalog.urls')),  #urls catalgo
+    path('citas/', include('CoreApps.appointments.urls')),  # ← importante
+    path('select2/', include('django_select2.urls')),
     path('password_reset/', auth_views.PasswordResetView.as_view(), name='password_reset'),
     path('password_reset/done/', auth_views.PasswordResetDoneView.as_view(), name='password_reset_done'),
     path('reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(), name='password_reset_confirm'),

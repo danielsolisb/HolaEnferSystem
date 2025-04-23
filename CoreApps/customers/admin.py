@@ -3,9 +3,9 @@ from .models import CustomerProfile, MedicalHistory
 
 @admin.register(CustomerProfile)
 class CustomerProfileAdmin(admin.ModelAdmin):
-    list_display = ( 'nombres', 'apellidos', 'cedula','telefono', 'email', 'registrado_por', 'fecha_registro')
-    search_fields = ('nombres', 'apellidos', 'cedula', 'telefono', 'email', 'registrado_por__email')
-    list_filter = ('fecha_registro', 'registrado_por')
+    list_display = ('cedula', 'nombres', 'apellidos', 'telefono', 'ciudad', 'registrado_por', 'fecha_registro')
+    search_fields = ('cedula', 'nombres', 'apellidos', 'telefono', 'email', 'ciudad__nombre')
+    list_filter = ('ciudad', 'fecha_registro', 'registrado_por')
 
 @admin.register(MedicalHistory)
 class MedicalHistoryAdmin(admin.ModelAdmin):

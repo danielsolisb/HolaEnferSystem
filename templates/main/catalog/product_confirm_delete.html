@@ -1,0 +1,18 @@
+{% extends 'main/dashboard.html' %}
+{% load static %}
+
+{% block content %}
+<div class="panel">
+    <div class="panel-heading">
+        <h3 class="panel-title text-danger">Eliminar Producto</h3>
+    </div>
+    <div class="panel-body">
+        <p>¿Estás seguro de eliminar el producto <strong>{{ object.nombre }}</strong>?</p>
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Eliminar</button>
+            <a href="{% url 'catalog:product-list' %}" class="btn btn-default">Cancelar</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

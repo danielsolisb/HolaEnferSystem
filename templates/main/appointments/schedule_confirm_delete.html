@@ -1,0 +1,18 @@
+{% extends 'main/dashboard.html' %}
+
+{% block content %}
+<div class="panel">
+    <div class="panel-heading">
+        <h3 class="panel-title text-danger">Eliminar Horario</h3>
+    </div>
+    <div class="panel-body">
+        <p>¿Estás seguro de que deseas eliminar el horario del <strong>{{ object.fecha }}</strong> de <strong>{{ object.hora_inicio }}</strong> a <strong>{{ object.hora_fin }}</strong>?</p>
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Eliminar</button>
+            <a href="{% url 'appointments:mis-horarios' %}" class="btn btn-default">Cancelar</a>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

@@ -4,7 +4,7 @@ from .models import CustomerProfile, MedicalHistory
 class CustomerProfileForm(forms.ModelForm):
     class Meta:
         model = CustomerProfile
-        fields = ['nombres', 'apellidos', 'cedula', 'telefono', 'email', 'direccion', 'fecha_nacimiento']
+        fields = ['nombres', 'apellidos', 'cedula', 'telefono', 'email', 'direccion', 'ciudad', 'fecha_nacimiento']
         widgets = {
             'nombres': forms.TextInput(attrs={'class': 'form-control'}),
             'apellidos': forms.TextInput(attrs={'class': 'form-control'}),
@@ -12,6 +12,7 @@ class CustomerProfileForm(forms.ModelForm):
             'telefono': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
             'direccion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'ciudad': forms.Select(attrs={'class': 'form-control'}),  # Corrección aquí
             'fecha_nacimiento': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
         }
 

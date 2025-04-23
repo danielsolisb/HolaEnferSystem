@@ -123,7 +123,7 @@
 
 						            <li>
 						                <a href="#">
-						                    <i class="demo-psi-data-cloud"></i>
+						                    <i class="demo-pli-list-view"></i>
 						                    <span class="menu-title">Clientes</span>
 											<i class="arrow"></i>
 						                </a>
@@ -131,8 +131,8 @@
 						              
 						                <!--Submenu-->
 						                <ul class="collapse">
-						                    <li><a href="{%url 'customers:customer-list'%}">Lista de clientes</a></li>
-											<li><a href="{%url 'customers:customer-create'%}">Nuevo Cliente</a></li>											
+						                    <li><a href="{%url 'customers:customer-create'%}">Nuevo Cliente</a></li>
+                                            <li><a href="{%url 'customers:customer-list'%}">Lista de clientes</a></li>
 						                </ul>
 						            </li>
 						
@@ -140,43 +140,36 @@
 						            <li>
 						                <a href="#">
 						                    <i class="demo-psi-monitor-2"></i>
-						                    <span class="menu-title">Monitor</span>
+						                    <span class="menu-title">Catálogo</span>
+                                            <i class="arrow"></i>
 						                </a>
-						            </li>
-						
-						            <!--Menu list item-->
-						            <li>
-						                <a href="#">
-						                    <i class="demo-pli-data-storage"></i>
-						                    <span class="menu-title">Log</span>
-											<i class="arrow"></i>
-						                </a>
-						
-						                <!--Submenu-->
+                                        <!--Submenu-->
 						                <ul class="collapse">
-						                    <li><a href="tables-static.html">Static Tables</a></li>
-											<li><a href="tables-bootstrap.html">Bootstrap Tables</a></li>
-											<li><a href="tables-datatable.html">Data Tables</a></li>
-											<li><a href="tables-footable.html">Foo Tables</a></li>
-											
+						                    <li><a href="{%url 'catalog:service-create'%}">Nuevo Servicio</a></li>	
+                                            <li><a href="{%url 'catalog:service-list'%}">Lista de servicios</a></li>                                            										
+                                            <li><a href="{%url 'catalog:product-create'%}">Nuevo Producto</a></li>	
+                                            <li><a href="{%url 'catalog:product-list'%}">Lista de productos</a></li>
 						                </ul>
 						            </li>
 						
 						            <!--Menu list item-->
 						            <li>
 						                <a href="#">
-						                    <i class="demo-pli-gear"></i>
-						                    <span class="menu-title">Settings</span>
-								    </a>					               
-						            </li>
-						
-						            <!--Menu list item-->
-						            <li>
-						                <a href="#">
-						                    <i class="demo-pli-support"></i>
-						                    <span class="menu-title">Support</span>
+						                    <i class="demo-pli-calendar-4"></i>
+						                    <span class="menu-title">Agenda</span>
+											<i class="arrow"></i>
 						                </a>
+						
+						                <!--Submenu-->
+						                <ul class="collapse">
+                                            <li><a href="{%url 'appointments:appointment-list'%}">Lista de citas</a></li>
+						                    <li><a href="{%url 'appointments:appointment-create'%}">Nueva cita</a></li>	
+                                            <li><a href="{%url 'appointments:nuevo-horario'%}">Establecer Horarios</a></li>	
+                                            <li><a href="{%url 'appointments:mis-horarios'%}">Mis Horarios</a></li>										
+						                </ul>
 						            </li>
+											            			
+						       					            
 						
 						            <!--Menu list item-->
 						            <li>

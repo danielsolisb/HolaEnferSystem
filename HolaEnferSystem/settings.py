@@ -41,6 +41,10 @@ INSTALLED_APPS = [
     'CoreApps.users',
     'CoreApps.customers',
     'CoreApps.main',
+    'CoreApps.catalog',
+    'CoreApps.appointments',
+    'CoreApps.core',
+    'django_select2',
     'widget_tweaks', 
 ]
 # Configuración del modelo de usuario personalizado

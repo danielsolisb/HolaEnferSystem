@@ -1,0 +1,56 @@
+{% extends 'main/dashboard.html' %}
+{% load static %}
+
+{% block content %}
+<div class="panel">
+    <div class="panel-heading">
+        <h3 class="panel-title">Listado de Citas</h3>
+    </div>
+    <div class="panel-body">
+        <a href="{% url 'appointments:appointment-create' %}" class="btn btn-primary btn-labeled">
+            <i class="btn-label demo-pli-add"></i> Nueva Cita
+        </a>
+        <br><br>
+        <table class="table table-striped" id="appointment-table">
+            <thead>
+                <tr>
+                    <th>Paciente</th>
+                    <th>Servicio</th>
+                    <th>Hora</th>
+                    <th>Enfermero</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for appointment in appointments %}
+                <tr>
+                    <td>{{ appointment.paciente }}</td>
+                    <td>{{ appointment.servicio }}</td>
+                    <td>{{ appointment.horario.fecha }} {{ appointment.hora }}</td>
+                    <td>{{ appointment.horario.enfermero.nombres }}</td>
+                    <td>{{ appointment.estado }}</td>
+                    <td>
+                        <div class="btn-group">
+                            <a href="{% url 'appointments:appointment-detail' appointment.pk %}" class="btn btn-sm btn-default btn-hover-primary" title="Ver">
+                                <i class="demo-pli-receipt-4"></i>
+                            </a>
+                            <a href="{% url 'appointments:appointment-update' appointment.pk %}" class="btn btn-sm btn-default btn-hover-success" title="Editar">
+                                <i class="demo-pli-pen-5"></i>
+                            </a>
+                            <a href="{% url 'appointments:appointment-delete' appointment.pk %}" class="btn btn-sm btn-default btn-hover-danger" title="Eliminar">
+                                <i class="demo-pli-trash"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6">No hay citas registradas.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

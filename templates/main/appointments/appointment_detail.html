@@ -1,0 +1,32 @@
+{% extends 'main/dashboard.html' %}
+{% block content %}
+<div class="panel">
+    <div class="panel-heading">
+        <h3 class="panel-title">Detalle de Cita</h3>
+    </div>
+    <div class="panel-body">
+        <table class="table table-bordered">
+            <tr><th>Paciente:</th><td>{{ appointment.paciente }}</td></tr>
+            <tr><th>Servicio:</th><td>{{ appointment.servicio }}</td></tr>
+            <tr><th>Productos:</th>
+                <td>
+                    {% for p in appointment.productos.all %}
+                        • {{ p.nombre }}<br>
+                    {% empty %}
+                        Sin productos asociados
+                    {% endfor %}
+                </td>
+            </tr>
+            <tr><th>Enfermero:</th><td>{{ appointment.horario.enfermero.nombres }}</td></tr>
+            <tr><th>Horario:</th><td>{{ appointment.horario.fecha }} de {{ appointment.horario.hora_inicio }} a {{ appointment.horario.hora_fin }}</td></tr>
+            <tr><th>Hora asignada:</th><td>{{ appointment.hora }}</td></tr>
+            <tr><th>Estado:</th><td>{{ appointment.estado }}</td></tr>
+            <tr><th>Asignado por:</th><td>{{ appointment.asignado_por }}</td></tr>
+            <tr><th>Notas:</th><td>{{ appointment.notas|linebreaksbr }}</td></tr>
+            <tr><th>Fecha creación:</th><td>{{ appointment.fecha_creacion }}</td></tr>
+        </table>
+        <a href="{% url 'appointments:appointment-update' appointment.pk %}" class="btn btn-success">Editar</a>
+        <a href="{% url 'appointments:appointment-list' %}" class="btn btn-default">Volver</a>
+    </div>
+</div>
+{% endblock %}

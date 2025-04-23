@@ -1,0 +1,237 @@
+{% extends 'main/dashboard.html' %}
+{% load widget_tweaks %}
+{% block content %}
+<div id="page-content">
+  <div class="row">
+    <div class="col-md-8 col-md-offset-2 col-sm-10 col-sm-offset-1">
+
+
+<div class="panel">
+    <div class="panel-heading">
+        <h3 class="panel-title">{{ title }}</h3>
+    </div>
+    <div class="panel-body">
+        <form method="post">
+            {% csrf_token %}
+            
+           <div class="form-group">
+    <label for="id_ciudad">Ciudad</label>
+    <select id="id_ciudad" name="ciudad" class="form-control">
+        <option value="">-- Seleccione una ciudad --</option>
+        {% for ciudad in ciudades %}
+            <option value="{{ ciudad.id }}">{{ ciudad.nombre }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<div class="form-group">
+    <label for="id_paciente">Paciente</label>
+    <select id="id_paciente" name="paciente" class="form-control">
+        <option value="">-- Seleccione una ciudad primero --</option>
+    </select>
+</div>
+
+<div id="loader-pacientes" style="display:none;" class="text-primary mb-3">
+    <i class="fas fa-spinner fa-spin"></i> Cargando pacientes...
+</div>
+
+{# ENFERMERO #}
+<div class="form-group">
+    <label for="id_enfermero">{{ form.enfermero.label }}</label>
+    {{ form.enfermero }}
+</div>
+
+{# SELECT HORARIOS #}
+<div class="form-group">
+    <label for="id_horario">Horario disponible</label>
+    <select id="id_horario" name="horario" class="form-control">
+        <option value="">-- Seleccione un enfermero primero --</option>
+    </select>
+</div>
+
+<div id="loader-horarios" style="display:none;" class="text-primary mb-3">
+    <i class="fas fa-spinner fa-spin"></i> Cargando horarios...
+</div>
+
+{# RESTO DE CAMPOS MANUALMENTE RENDERIZADOS #}
+<div class="form-group">
+    <label for="id_hora">{{ form.hora.label }}</label>
+    {{ form.hora }}
+</div>
+
+<div class="form-group">
+    <label for="id_servicio">{{ form.servicio.label }}</label>
+    {{ form.servicio }}
+</div>
+
+<div class="form-group">
+    <label for="id_producto">{{ form.producto.label }}</label>
+    {{ form.producto }}
+</div>
+
+
+
+<div class="form-group">
+    <label for="id_estado">{{ form.estado.label }}</label>
+    {{ form.estado }}
+</div>
+
+<div class="form-group">
+    <label for="id_notas">{{ form.notas.label }}</label>
+    {{ form.notas }}
+</div>
+
+
+
+            <button type="submit" class="btn btn-success">Guardar</button>
+            <a href="{% url 'appointments:appointment-list' %}" class="btn btn-default">Cancelar</a>
+        </form>
+    </div>
+</div>
+
+</div>
+</div>
+</div>
+<!-- Tom Select -->
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+
+<!-- Tom Select -->
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    // Referencias DOM
+    const ciudadSelect = document.getElementById("id_ciudad");
+    const pacienteSelect = document.getElementById("id_paciente");
+    const loaderPacientes = document.getElementById("loader-pacientes");
+
+    const enfermeroSelect = document.getElementById("id_enfermero");
+    const horarioSelect = document.getElementById("id_horario");
+    const loaderHorarios = document.getElementById("loader-horarios");
+
+    let pacienteSelectObj = null;
+
+    // TomSelect: pacientes
+    function inicializarPacienteAutocomplete() {
+        if (pacienteSelectObj) {
+            pacienteSelectObj.destroy();
+        }
+
+        pacienteSelectObj = new TomSelect("#id_paciente", {
+            create: false,
+            maxOptions: 500,
+            sortField: { field: "text", direction: "asc" },
+            placeholder: "Escriba para buscar paciente..."
+        });
+    }
+
+    // Cargar pacientes por ciudad
+    function cargarPacientes(ciudadId) {
+        loaderPacientes.style.display = "block";
+
+        if (pacienteSelectObj) {
+            pacienteSelectObj.destroy();
+        }
+        pacienteSelect.innerHTML = '<option value="">Cargando pacientes...</option>';
+
+        fetch(`/citas/api/pacientes/?ciudad_id=${ciudadId}`)
+            .then(response => response.json())
+            .then(data => {
+                loaderPacientes.style.display = "none";
+                pacienteSelect.innerHTML = "";
+
+                if (data.length === 0) {
+                    pacienteSelect.innerHTML = '<option value="">No hay pacientes disponibles</option>';
+                    return;
+                }
+
+                const defaultOption = document.createElement("option");
+                defaultOption.value = "";
+                defaultOption.textContent = "-- Seleccione un paciente --";
+                pacienteSelect.appendChild(defaultOption);
+
+                data.forEach(p => {
+                    const option = document.createElement("option");
+                    option.value = p.id;
+                    option.textContent = p.nombre;
+                    pacienteSelect.appendChild(option);
+                });
+
+                inicializarPacienteAutocomplete();
+            });
+    }
+
+    // Cargar horarios por enfermero
+    function cargarHorarios(enfermeroId) {
+        loaderHorarios.style.display = "block";
+        horarioSelect.innerHTML = '<option value="">Cargando horarios...</option>';
+
+        fetch(`/citas/api/horarios/?enfermero_id=${enfermeroId}`)
+            .then(response => response.json())
+            .then(data => {
+                loaderHorarios.style.display = "none";
+                horarioSelect.innerHTML = "";
+
+                if (data.length === 0) {
+                    horarioSelect.innerHTML = '<option value="">No hay horarios disponibles</option>';
+                    return;
+                }
+
+                const defaultOption = document.createElement("option");
+                defaultOption.value = "";
+                defaultOption.textContent = "-- Seleccione un horario --";
+                horarioSelect.appendChild(defaultOption);
+
+                data.forEach(h => {
+                    const option = document.createElement("option");
+                    option.value = h.id;
+                    option.textContent = h.texto;
+                    horarioSelect.appendChild(option);
+                });
+            });
+    }
+
+    // Disparar carga si ya hay ciudad/enfermero seleccionado al entrar
+    if (ciudadSelect && ciudadSelect.value) {
+        cargarPacientes(ciudadSelect.value);
+    }
+
+    if (enfermeroSelect && enfermeroSelect.value) {
+        cargarHorarios(enfermeroSelect.value);
+    }
+
+    // Eventos: selección ciudad
+    if (ciudadSelect) {
+        ciudadSelect.addEventListener("change", function () {
+            const ciudadId = this.value;
+            if (ciudadId) {
+                cargarPacientes(ciudadId);
+            } else {
+                pacienteSelect.innerHTML = '<option value="">-- Seleccione una ciudad primero --</option>';
+                if (pacienteSelectObj) {
+                    pacienteSelectObj.destroy();
+                }
+            }
+        });
+    }
+
+    // Eventos: selección enfermero
+    if (enfermeroSelect) {
+        enfermeroSelect.addEventListener("change", function () {
+            const enfermeroId = this.value;
+            if (enfermeroId) {
+                cargarHorarios(enfermeroId);
+            } else {
+                horarioSelect.innerHTML = '<option value="">Seleccione un enfermero primero</option>';
+            }
+        });
+    }
+});
+</script>
+
+
+{% endblock %}
+
+

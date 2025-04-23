@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.views.generic import ListView, CreateView, DetailView
+from django.views.generic import ListView, CreateView, DetailView, UpdateView, DeleteView
 from django.urls import reverse_lazy
 from .models import CustomerProfile
 from .forms import CustomerProfileForm
@@ -52,4 +52,15 @@ class CustomerDetailView(LoginRequiredMixin, DetailView):
         context['subtitle'] = "Nuevo"
         context['user'] = user
         return context
+
+class CustomerUpdateView(LoginRequiredMixin, UpdateView):
+    model = CustomerProfile
+    form_class = CustomerProfileForm
+    template_name = 'main/customers/customer_form.html'
+    success_url = reverse_lazy('customers:customer-list')
+
+class CustormerDeleteView(LoginRequiredMixin, DeleteView):
+    model = CustomerProfile
+    template_name = 'main/customers/consumer_confirm_delete.html'
+    success_url = reverse_lazy('customers:customer-list')
 

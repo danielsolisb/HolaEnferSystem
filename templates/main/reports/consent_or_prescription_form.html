@@ -1,0 +1,97 @@
+{% extends 'main/dashboard.html' %}
+{% load widget_tweaks %}
+
+{% block content %}
+<div class="panel">
+  <div class="panel-heading">
+    <h3 class="panel-title">Adjuntar Consentimiento o Receta</h3>
+  </div>
+  <div class="panel-body">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <div class="form-group">
+        <label for="id_tipo">Tipo de documento</label>
+        {{ form.tipo|add_class:"form-control" }}
+      </div>
+
+      <div class="form-group" id="receta-div" style="display:none;">
+        <label for="id_imagen_receta">Foto de la receta (usar cámara)</label>
+        {{ form.imagen_receta|add_class:"form-control" }}
+      </div>
+
+      <div class="form-group" id="firma-div" style="display:none;">
+        <label>Firma digital del paciente</label><br>
+        <canvas id="firmaCanvas" width="300" height="150" style="border:1px solid #000"></canvas><br>
+        <button type="button" onclick="guardarFirma()">Guardar Firma</button>
+        <input type="hidden" name="firma_digital" id="firma_digital_input">
+      </div>
+
+      <input type="hidden" name="report" value="{{ form.initial.report }}">
+      <button type="submit" class="btn btn-primary">Guardar Documento</button>
+    </form>
+  </div>
+</div>
+
+<script>
+const tipoSelect = document.getElementById('id_tipo');
+const recetaDiv = document.getElementById('receta-div');
+const firmaDiv = document.getElementById('firma-div');
+
+tipoSelect.addEventListener('change', () => {
+  const value = tipoSelect.value;
+  recetaDiv.style.display = (value === 'receta') ? 'block' : 'none';
+  firmaDiv.style.display = (value === 'consentimiento') ? 'block' : 'none';
+});
+
+// Firma digital - canvas
+const canvas = document.getElementById("firmaCanvas");
+const ctx = canvas.getContext("2d");
+let drawing = false;
+
+canvas.addEventListener("mousedown", () => drawing = true);
+canvas.addEventListener("mouseup", () => drawing = false);
+canvas.addEventListener("mousemove", dibujar);
+
+function dibujar(e) {
+  if (!drawing) return;
+  const rect = canvas.getBoundingClientRect();
+  ctx.lineWidth = 2;
+  ctx.lineCap = "round";
+  ctx.strokeStyle = "#000";
+  ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+}
+
+function guardarFirma() {
+  const dataURL = canvas.toDataURL("image/png");
+  const blob = dataURLtoBlob(dataURL);
+  const file = new File([blob], "firma.png", { type: "image/png" });
+  const dataTransfer = new DataTransfer();
+  dataTransfer.items.add(file);
+  const input = document.createElement("input");
+  input.type = "file";
+  input.name = "firma_digital";
+  input.files = dataTransfer.files;
+  input.style.display = "none";
+  document.forms[0].appendChild(input);
+}
+
+function dataURLtoBlob(dataURL) {
+  const byteString = atob(dataURL.split(',')[1]);
+  const ab = new ArrayBuffer(byteString.length);
+  const ia = new Uint8Array(ab);
+  for (let i = 0; i < byteString.length; i++) {
+    ia[i] = byteString.charCodeAt(i);
+  }
+  return new Blob([ab], { type: 'image/png' });
+}
+// Ejecutar al cargar la página para mostrar u ocultar el campo correcto según el valor inicial
+document.addEventListener('DOMContentLoaded', () => {
+  const event = new Event('change');
+  tipoSelect.dispatchEvent(event);
+});
+
+</script>
+{% endblock %}

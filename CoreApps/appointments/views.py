@@ -9,6 +9,11 @@ from django.http import JsonResponse
 from CoreApps.customers.models import CustomerProfile
 from CoreApps.core.models import City
 from CoreApps.appointments.models import Schedule
+from CoreApps.appointments.models import Appointment
+from datetime import datetime, timedelta
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 # Listar todas las citas (operador y administrador)
 class AppointmentListView(LoginRequiredMixin, ListView):
@@ -31,7 +36,7 @@ class AppointmentListView(LoginRequiredMixin, ListView):
 class AppointmentCreateView(LoginRequiredMixin, CreateView):
     model = Appointment
     form_class = AppointmentForm
-    template_name = 'main/appointments/appointment_form.html'
+    template_name = 'main/appointments/appointment_form1.html'
     success_url = reverse_lazy('appointments:appointment-list')
 
     def form_valid(self, form):
@@ -62,7 +67,7 @@ class AppointmentDetailView(LoginRequiredMixin, DetailView):
 class AppointmentUpdateView(LoginRequiredMixin, UpdateView):
     model = Appointment
     form_class = AppointmentForm
-    template_name = 'main/appointments/appointment_form.html'
+    template_name = 'main/appointments/appointment_form1.html'
     success_url = reverse_lazy('appointments:appointment-list')
 
     def get_context_data(self, **kwargs):
@@ -70,6 +75,19 @@ class AppointmentUpdateView(LoginRequiredMixin, UpdateView):
         context['title'] = "Editar Cita"
         context['subtitle'] = "Modificar datos"
         context['ciudades'] = City.objects.all()
+        # Datos iniciales solo si existe objeto (modo edición)
+        context['ciudad_inicial'] = self.object.paciente.ciudad_id if self.object.paciente else None
+        context['paciente_inicial'] = self.object.paciente_id
+        context['enfermero_inicial'] = self.object.enfermero_id
+        context['horario_inicial'] = self.object.horario_id
+        context['hora_inicial'] = self.object.hora.strftime("%H:%M") if self.object.hora else ''
+        context['zona_inicial'] = (
+            self.object.paciente.zona_id
+            if self.object.paciente and self.object.paciente.zona_id
+            else None
+        )
+        context['mapa_inicial'] = self.object.mapa_ubicacion if self.object.mapa_ubicacion else ''
+
         return context
 
 # Eliminar cita
@@ -140,15 +158,26 @@ class ScheduleDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
 
 
 def obtener_pacientes_por_ciudad(request):
+    
     ciudad_id = request.GET.get('ciudad_id')
+    zona_id   = request.GET.get('zona_id')
     if not ciudad_id:
         return JsonResponse([], safe=False)
 
-    pacientes = CustomerProfile.objects.filter(ciudad_id=ciudad_id).values('id', 'nombres', 'apellidos', 'cedula')
+    # Base QS filtrada por ciudad, y si llega zona_id, filtramos por zona
+    qs = CustomerProfile.objects.filter(ciudad_id=ciudad_id)
+    #qs = CustomerProfile.objects.filter(ciudad_id=ciudad_id)
+    if zona_id:
+        qs = qs.filter(zona_id=zona_id)
+    #pacientes = qs.values('id', 'nombres', 'apellidos', 'cedula')
+    pacientes = qs.values('id', 'nombres', 'apellidos', 'cedula', 'direccion', 'ubicacion_mapa')
     data = [
         {
             'id': p['id'],
-            'nombre': f"{p['nombres']} {p['apellidos']} ({p['cedula']})"
+            #'nombre': f"{p['nombres']} {p['apellidos']} ({p['cedula']})"
+            'nombre': f"{p['nombres']} {p['apellidos']} ({p['cedula']})",
+            'direccion': p['direccion'],
+            'mapa': p['ubicacion_mapa']  # Añade esta línea
         }
         for p in pacientes
     ]
@@ -160,11 +189,76 @@ def obtener_horarios_por_enfermero(request):
         return JsonResponse([], safe=False)
 
     horarios = Schedule.objects.filter(enfermero_id=enfermero_id, disponible=True).order_by('fecha', 'hora_inicio')
+    data = []
+
+    for h in horarios:
+        # Obtener horas ocupadas en citas para este horario
+        citas = Appointment.objects.filter(enfermero_id=enfermero_id, horario_id=h.id)
+        horas_ocupadas = [c.hora.strftime("%H:%M") for c in citas]
+
+        data.append({
+            'id': h.id,
+            'texto': f"{h.fecha} - {h.hora_inicio} a {h.hora_fin}",
+            'fecha': h.fecha.strftime("%Y-%m-%d"),
+            'hora_inicio': h.hora_inicio.strftime("%H:%M"),
+            'hora_fin': h.hora_fin.strftime("%H:%M"),
+            'ocupadas': horas_ocupadas  # NUEVO CAMPO
+        })
+
+    return JsonResponse(data, safe=False)
+#def obtener_horarios_por_enfermero(request):
+#    enfermero_id = request.GET.get('enfermero_id')
+#    if not enfermero_id:
+#        return JsonResponse([], safe=False)
+#
+#    horarios = Schedule.objects.filter(enfermero_id=enfermero_id, disponible=True).order_by('fecha', 'hora_inicio')
+#    data = [
+#        {
+#            'id': h.id,
+#            'texto': f"{h.fecha} - {h.hora_inicio} a {h.hora_fin}",
+#            'fecha': h.fecha.strftime("%Y-%m-%d"),  # lo importante
+#            'hora_inicio': h.hora_inicio.strftime("%H:%M"),
+#            'hora_fin': h.hora_fin.strftime("%H:%M"),
+#        }
+#        for h in horarios
+#    ]
+#    return JsonResponse(data, safe=False)
+
+def obtener_enfermeros_por_ciudad(request):
+    ciudad_id = request.GET.get('ciudad_id')
+    zona_id   = request.GET.get('zona_id')
+    if not ciudad_id:
+        return JsonResponse([], safe=False)
+
+    # Filtramos por ciudad y, si existe zona_id, por esa zona (M2M)
+    qs = User.objects.filter(rol='enfermero', ciudad_id=ciudad_id)
+    if zona_id:
+        qs = qs.filter(zonas__id=zona_id)
+    enfermeros = qs.values('id', 'nombres', 'email')
     data = [
         {
-            'id': h.id,
-            'texto': f"{h.fecha} - {h.hora_inicio} a {h.hora_fin}"
+            'id': e['id'],
+            'nombre': f"{e['nombres']} ({e['email']})"
         }
-        for h in horarios
+        for e in enfermeros
     ]
     return JsonResponse(data, safe=False)
+
+
+
+
+#citas de enfermeros logeados para realizar la visualizacion y gestion de las mismas
+class AssignedAppointmentListView(LoginRequiredMixin, ListView):
+    model = Appointment
+    template_name = 'main/appointments/enfermero_appointment_list.html'
+    context_object_name = 'appointments'
+
+    def get_queryset(self):
+        return Appointment.objects.filter(
+            enfermero=self.request.user
+        ).order_by('horario__fecha', 'hora')
+
+class AssignedAppointmentDetailView(LoginRequiredMixin, DetailView):
+    model = Appointment
+    template_name = 'main/appointments/enfermero_appointment_detail.html'
+    context_object_name = 'appointment'

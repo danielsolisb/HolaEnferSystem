@@ -1,0 +1,43 @@
+{% extends 'main/dashboard.html' %}
+{% load widget_tweaks %}
+
+{% block content %}
+<div class="panel">
+    <div class="panel-heading">
+        <h3 class="panel-title">Nuevo Reporte</h3>
+    </div>
+    <div class="panel-body">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="button" onclick="obtenerUbicacion()" class="btn btn-info">Capturar Ubicación GPS</button>
+            <button type="submit" class="btn btn-primary">Guardar Reporte</button>
+            <a href="{% url 'appointments:mis-citas' %}" class="btn btn-secondary">Cancelar</a>
+        </form>
+        {% if form.instance.pk %}
+          <hr>
+          <h5>¿Deseas adjuntar una receta o consentimiento?</h5>
+          <a href="{% url 'reports:consent-or-prescription-create' %}?report={{ form.instance.pk }}" class="btn btn-outline-primary">
+            Adjuntar Documento
+          </a>
+        {% endif %}
+
+    </div>
+</div>
+
+<script>
+function obtenerUbicacion() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+            let lat = position.coords.latitude;
+            let lng = position.coords.longitude;
+            let url = `https://www.google.com/maps?q=${lat},${lng}`;
+            document.getElementById("id_ubicacion_gps").value = url;
+            alert("Ubicación GPS capturada correctamente.");
+        });
+    } else {
+        alert("Geolocalización no está disponible en este navegador.");
+    }
+}
+</script>
+{% endblock %}

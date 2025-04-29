@@ -1,0 +1,468 @@
+{% extends 'main/dashboard.html' %}
+{% load widget_tweaks %}
+{% block content %}
+<div id="page-content">
+  <div class="row">
+    <div class="col-md-8 col-md-offset-2 col-sm-10 col-sm-offset-1">
+
+{% if form.non_field_errors %}
+<div class="alert alert-danger">
+    {% for error in form.non_field_errors %}
+        <p>{{ error }}</p>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="panel">
+    <div class="panel-heading">
+        <h3 class="panel-title">{{ title }}</h3>
+    </div>
+    <div class="panel-body">
+        <!-- Hidden iniciales para edición -->
+        <input type="hidden" id="ciudad-inicial" value="{{ ciudad_inicial }}">
+        <input type="hidden" id="zona-inicial" value="{{ zona_inicial }}">
+        <input type="hidden" id="paciente-inicial" value="{{ paciente_inicial }}">
+        <input type="hidden" id="enfermero-inicial" value="{{ enfermero_inicial }}">
+        <input type="hidden" id="horario-inicial" value="{{ horario_inicial }}">
+        <input type="hidden" id="hora-inicial"    value="{{ hora_inicial }}">
+        <input type="hidden" name="horario"        id="id_horario_oculto">
+
+        <form method="post">
+            {% csrf_token %}
+
+            <!-- Ciudad -->
+            <div class="form-group">
+                <label for="id_ciudad">Ciudad</label>
+                <select id="id_ciudad" class="form-control">
+                    <option value="">-- Seleccione una ciudad --</option>
+                    {% for ciudad in ciudades %}
+                        <option value="{{ ciudad.id }}">{{ ciudad.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Zona -->
+            <div class="form-group">
+                <label for="id_zona">Zona</label>
+                <select id="id_zona" class="form-control" disabled>
+                    <option value="">-- Seleccione una ciudad primero --</option>
+                </select>
+            </div>
+            <div id="loader-zonas" style="display:none;" class="text-primary mb-3">
+                <i class="fas fa-spinner fa-spin"></i> Cargando zonas...
+            </div>
+
+            <!-- Paciente -->
+            <div class="form-group">
+                <label for="id_paciente">Paciente</label>
+                <select id="id_paciente" name="paciente" class="form-control" disabled>
+                    <option value="">-- Seleccione zona primero --</option>
+                </select>
+            </div>
+            <div id="loader-pacientes" style="display:none;" class="text-primary mb-3">
+                <i class="fas fa-spinner fa-spin"></i> Cargando pacientes...
+            </div>
+
+            <!-- Enfermero -->
+            <div class="form-group">
+                <label for="id_enfermero">Enfermero</label>
+                <select id="id_enfermero" name="enfermero" class="form-control" disabled>
+                    <option value="">-- Seleccione zona primero --</option>
+                </select>
+            </div>
+            <div id="loader-enfermeros" style="display:none;" class="text-primary mb-3">
+                <i class="fas fa-spinner fa-spin"></i> Cargando enfermeros...
+            </div>
+
+            <!-- Fecha y hora -->
+            <div class="form-group">
+                <label for="id_fecha">{{ form.fecha.label }}</label>
+                {{ form.fecha }}
+            </div>
+            <div id="loader-fechas" style="display:none;" class="text-primary mb-3">
+                <i class="fas fa-spinner fa-spin"></i> Cargando horas disponibles...</div>
+            <div class="form-group">
+                <label for="id_hora">Hora disponible</label>
+                <select id="id_hora" name="hora" class="form-control">
+                    <option value="">-- Seleccione una fecha --</option>
+                </select>
+            </div>
+
+            <!-- Servicio y precio -->
+            <div class="form-group">
+                <label for="id_servicio">{{ form.servicio.label }}</label>
+                <select id="id_servicio" name="servicio" class="form-control">
+                    <option value="">-- Seleccione un servicio --</option>
+                    {% for servicio in form.fields.servicio.queryset %}
+                        <option value="{{ servicio.id }}" data-precio="{{ servicio.precio }}"
+                            {% if form.initial.servicio == servicio.id or form.instance.servicio.id == servicio.id %}selected{% endif %}>
+                            {{ servicio.nombre }}
+                        </option>
+                    {% endfor %}
+                </select>
+                <small id="precio-servicio" class="form-text text-muted mt-2" style="display:none;">
+                    Precio: <span id="valor-servicio"></span>
+                </small>
+            </div>
+
+            <!-- Producto, estado, notas -->
+            <div class="form-group">
+                <label for="id_producto">{{ form.producto.label }}</label>
+                {{ form.producto }}
+            </div>
+
+             <!-- Tipo de ubicación -->
+            <div class="form-group">
+              <label>{{ form.tipo_ubicacion.label }}</label><br>
+              {{ form.tipo_ubicacion }}
+            </div>
+
+            <!-- Ubicación (domicilio u otra) -->
+            <div class="form-group" id="container-ubicacion">
+              <label for="id_ubicacion">{{ form.ubicacion.label }}</label>
+              {{ form.ubicacion }}
+            </div>
+            <div class="form-group">
+              <label>Ubicación en el mapa</label>
+              <div id="map" style="height:300px; margin-bottom:10px;"></div>
+              {{ form.mapa_ubicacion }}
+            </div>
+
+           <!-- Doctor -->
+           <div class="form-group">
+               <label for="id_doctor_name">{{ form.doctor_name.label }}</label>
+               {{ form.doctor_name }}
+           </div>
+
+           <!-- Diagnóstico -->
+           <div class="form-group">
+               <label for="id_diagnosis">{{ form.diagnosis.label }}</label>
+               {{ form.diagnosis }}
+           </div>
+
+            <div class="form-group">
+                <label for="id_estado">{{ form.estado.label }}</label>
+                {{ form.estado }}
+            </div>
+            <div class="form-group">
+                <label for="id_notas">{{ form.notas.label }}</label>
+                {{ form.notas }}
+            </div>
+
+            <!-- Botones -->
+            <button type="submit" class="btn btn-success">Guardar</button>
+            <a href="{% url 'appointments:appointment-list' %}" class="btn btn-default">Cancelar</a>
+        </form>
+    </div>
+</div>
+
+</div></div></div>
+
+<!-- Tom Select (si sigue usándose) -->
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // — Referencias a elementos
+  const ciudadSelect    = document.getElementById('id_ciudad');
+  const zonaSelect      = document.getElementById('id_zona');
+  const pacienteSelect  = document.getElementById('id_paciente');
+  const enfermeroSelect = document.getElementById('id_enfermero');
+  const fechaInput      = document.getElementById('id_fecha');
+  const horaSelect      = document.getElementById('id_hora');
+  const servicioSelect  = document.getElementById('id_servicio');
+  const precioContainer = document.getElementById('precio-servicio');
+  const precioSpan      = document.getElementById('valor-servicio');
+  const loaderZonas     = document.getElementById('loader-zonas');
+  const loaderPacientes = document.getElementById('loader-pacientes');
+  const loaderEnfermeros= document.getElementById('loader-enfermeros');
+  const loaderFechas    = document.getElementById('loader-fechas');
+  const tipoRadios      = document.getElementsByName('tipo_ubicacion');
+  const ubicTextarea    = document.getElementById('id_ubicacion');
+
+  // — Valores iniciales para edición
+  const ciudadInicial    = document.getElementById('ciudad-inicial').value;
+  const zonaInicial      = document.getElementById('zona-inicial').value;
+  const pacienteInicial  = document.getElementById('paciente-inicial').value;
+  const enfermeroInicial = document.getElementById('enfermero-inicial').value;
+  const horarioInicial   = document.getElementById('horario-inicial').value;
+  const horaInicial      = document.getElementById('hora-inicial').value;
+
+  let currentDireccion = '';
+
+// --- Inicialización mapa ---
+const mapEl = document.getElementById('map');
+const urlInput = document.getElementById('id_mapa_ubicacion');
+let marker, map;
+let initLatLng = [0, 0];
+
+// Obtener valor inicial en edición
+let mapaInicial = "{{ mapa_inicial|default:'' }}";
+if (mapaInicial) {
+  const m = mapaInicial.match(/q=([-\d\.]+),([-\d\.]+)/);
+  if (m) initLatLng = [+m[1], +m[2]];
+}
+
+map = L.map(mapEl).setView(initLatLng, (initLatLng[0]===0&&initLatLng[1]===0)?2:15);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution:'&copy; OpenStreetMap'
+}).addTo(map);
+
+if (initLatLng[0]||initLatLng[1]) {
+  marker = L.marker(initLatLng, {draggable:true}).addTo(map)
+    .on('dragend', e=>{
+      const {lat,lng}=e.target.getLatLng();
+      urlInput.value=`https://www.google.com/maps?q=${lat},${lng}`;
+    });
+}
+// Clic en el mapa para establecer ubicación
+map.on('click', function(e) {
+  const {lat,lng} = e.latlng;
+  if (marker) map.removeLayer(marker);
+  marker = L.marker([lat,lng], {draggable:true}).addTo(map)
+    .on('dragend', ev=>{
+      const {lat,lng}=ev.target.getLatLng();
+      urlInput.value=`https://www.google.com/maps?q=${lat},${lng}`;
+    });
+  urlInput.value=`https://www.google.com/maps?q=${lat},${lng}`;
+});
+
+  // — Mostrar precio al seleccionar servicio
+  servicioSelect.addEventListener('change', function() {
+    const precio = this.selectedOptions[0].dataset.precio;
+    if (precio) {
+      precioSpan.textContent = precio;
+      precioContainer.style.display = 'block';
+    } else {
+      precioContainer.style.display = 'none';
+    }
+  });
+  if (servicioSelect.value) servicioSelect.dispatchEvent(new Event('change'));
+
+// Eventos para actualizar mapa según selección
+tipoRadios.forEach(radio => radio.addEventListener('change', updateMapaUbicacion));
+pacienteSelect.addEventListener('change', updateMapaUbicacion);
+
+// Inicialización en edición
+if (mapaInicial) {
+  urlInput.value = mapaInicial;
+  updateMapaUbicacion();
+}
+
+// Actualiza mapa al cambiar el tipo de ubicación
+function updateMapaUbicacion() {
+  const tipoUbicacion = document.querySelector('input[name="tipo_ubicacion"]:checked').value;
+  const direccionPaciente = pacienteSelect.selectedOptions[0]?.dataset.direccion || '';
+  const ubicacionMapaPaciente = pacienteSelect.selectedOptions[0]?.dataset.mapa || '';
+  
+  if (tipoUbicacion === 'domicilio') {
+    ubicTextarea.readOnly = true;
+    ubicTextarea.value = direccionPaciente || '';
+    if (ubicacionMapaPaciente) {
+      const m = ubicacionMapaPaciente.match(/q=([-\d\.]+),([-\d\.]+)/);
+      if (m) {
+        const [lat,lng] = [+m[1],+m[2]];
+        if (marker) map.removeLayer(marker);
+        marker = L.marker([lat,lng], {draggable:false}).addTo(map);
+        map.setView([lat,lng],15);
+        urlInput.value = ubicacionMapaPaciente;
+      }
+    }
+  } else {
+    ubicTextarea.readOnly = false;
+    ubicTextarea.value = '';
+    urlInput.value = '';
+    if (marker) map.removeLayer(marker);
+    map.setView(initLatLng,2);
+  }
+}
+
+function updateMapaUbicacion() {
+  const tipoUbicacion = document.querySelector('input[name="tipo_ubicacion"]:checked').value;
+  const direccionPaciente = pacienteSelect.selectedOptions[0]?.dataset.direccion || '';
+  const ubicacionMapaPaciente = pacienteSelect.selectedOptions[0]?.dataset.mapa || '';
+
+  if (tipoUbicacion === 'domicilio') {
+    ubicTextarea.readOnly = true;
+    ubicTextarea.value = direccionPaciente || '';
+    if (ubicacionMapaPaciente) {
+      const m = ubicacionMapaPaciente.match(/q=([-\d\.]+),([-\d\.]+)/);
+      if (m) {
+        const [lat, lng] = [+m[1], +m[2]];
+        if (marker) map.removeLayer(marker);
+        marker = L.marker([lat, lng], { draggable: false }).addTo(map);
+        map.setView([lat, lng], 15);
+        urlInput.value = ubicacionMapaPaciente;
+      }
+    } else {
+      if (marker) map.removeLayer(marker);
+      map.setView([0, 0], 2);
+      urlInput.value = '';
+    }
+  } else {
+    ubicTextarea.readOnly = false;
+    ubicTextarea.value = '';
+    urlInput.value = '';
+    if (marker) map.removeLayer(marker);
+    map.setView([0, 0], 2);
+  }
+}
+
+
+  // — Actualizar textarea de ubicación según el radio
+  function updateUbic() {
+    const seleccionado = [...tipoRadios].find(r => r.checked);
+    if (!seleccionado) return;
+    if (seleccionado.value === 'domicilio') {
+      ubicTextarea.readOnly = true;
+      ubicTextarea.value = currentDireccion || '';
+    } else {
+      ubicTextarea.readOnly = false;
+    }
+  }
+
+  // — Obtener zonas por ciudad
+  function fetchZonas(ciudadId, preselect = null) {
+    loaderZonas.style.display = 'block';
+    zonaSelect.disabled = true;
+    fetch("{% url 'customers:api-obtener-zonas' %}?ciudad_id=" + ciudadId)
+      .then(r => r.json())
+      .then(data => {
+        zonaSelect.innerHTML = '<option value="">-- Seleccione una zona --</option>';
+        data.forEach(z => zonaSelect.add(new Option(z.nombre, z.id)));
+        zonaSelect.disabled = false;
+        if (preselect) zonaSelect.value = preselect;
+        zonaSelect.dispatchEvent(new Event('change'));
+      })
+      .catch(console.error)
+      .finally(() => loaderZonas.style.display = 'none');
+  }
+
+ // Corregida función fetchPacientes
+function fetchPacientes(ciudadId, zonaId, preselect = null) {
+    loaderPacientes.style.display = 'block';
+    pacienteSelect.disabled = true;
+    fetch("{% url 'appointments:api-obtener-pacientes' %}"
+        + `?ciudad_id=${ciudadId}&zona_id=${zonaId}`)
+      .then(r => r.json())
+      .then(data => {
+        pacienteSelect.innerHTML = '<option value="">-- Seleccione un paciente --</option>';
+        data.forEach(p => {
+          const o = new Option(p.nombre, p.id);
+          o.dataset.direccion = p.direccion || '';
+          o.dataset.mapa = p.mapa || '';  // ← esta línea es la clave que faltaba
+          pacienteSelect.add(o);
+        });
+        pacienteSelect.disabled = false;
+        if (preselect) pacienteSelect.value = preselect;
+        pacienteSelect.dispatchEvent(new Event('change'));
+      })
+      .catch(console.error)
+      .finally(() => loaderPacientes.style.display = 'none');
+}
+
+
+  // — Obtener enfermeros por ciudad y zona
+  function fetchEnfermeros(ciudadId, zonaId, preselect = null) {
+    loaderEnfermeros.style.display = 'block';
+    enfermeroSelect.disabled = true;
+    fetch("{% url 'appointments:api-enfermeros' %}"
+        + `?ciudad_id=${ciudadId}&zona_id=${zonaId}`)
+      .then(r => r.json())
+      .then(data => {
+        enfermeroSelect.innerHTML = '<option value="">-- Seleccione un enfermero --</option>';
+        data.forEach(e => enfermeroSelect.add(new Option(e.nombre, e.id)));
+        enfermeroSelect.disabled = false;
+        if (preselect) {
+          enfermeroSelect.value = preselect;
+          if (fechaInput.value) {
+            fetchHorarios(preselect, fechaInput.value, horaInicial);
+          }
+        }
+      })
+      .catch(console.error)
+      .finally(() => loaderEnfermeros.style.display = 'none');
+  }
+
+  // — Obtener y generar slots de horas
+  function fetchHorarios(enfId, fecha, preselect = null) {
+    loaderFechas.style.display = 'block';
+    horaSelect.innerHTML = '<option value="">-- Seleccione una hora --</option>';
+    fetch("{% url 'appointments:api-obtener-horarios' %}?enfermero_id=" + enfId)
+      .then(r => r.json())
+      .then(data => {
+        data.filter(h => h.fecha === fecha).forEach(h => {
+          const [hi, mi] = h.hora_inicio.split(':').map(Number);
+          const [hf, mf] = h.hora_fin.split(':').map(Number);
+          let curr = new Date(0, 0, 0, hi, mi);
+          const end = new Date(0, 0, 0, hf, mf);
+          while (curr < end) {
+            const hh = String(curr.getHours()).padStart(2, '0');
+            const mm = String(curr.getMinutes()).padStart(2, '0');
+            const time = `${hh}:${mm}`;
+            if (!h.ocupadas.includes(time) || time === preselect) {
+              const o = new Option(time, time);
+              if (time === preselect) o.selected = true;
+              horaSelect.add(o);
+            }
+            curr.setHours(curr.getHours() + 1);
+          }
+        });
+      })
+      .catch(console.error)
+      .finally(() => loaderFechas.style.display = 'none');
+  }
+
+  // — Listeners
+  tipoRadios.forEach(r => r.addEventListener('change', updateUbic));
+
+  pacienteSelect.addEventListener('change', function() {
+    const opt = this.selectedOptions[0];
+    currentDireccion = opt ? opt.dataset.direccion : '';
+    updateUbic();
+  });
+
+  ciudadSelect.addEventListener('change', function() {
+    zonaSelect.innerHTML     = '<option value="">-- Seleccione una ciudad primero --</option>';
+    pacienteSelect.innerHTML = '<option value="">-- Seleccione zona primero --</option>';
+    enfermeroSelect.innerHTML= '<option value="">-- Seleccione zona primero --</option>';
+    zonaSelect.disabled = pacienteSelect.disabled = enfermeroSelect.disabled = true;
+    if (this.value) fetchZonas(this.value, zonaInicial);
+  });
+
+  zonaSelect.addEventListener('change', function() {
+    pacienteSelect.innerHTML = '<option value="">-- Seleccione zona primero --</option>';
+    enfermeroSelect.innerHTML= '<option value="">-- Seleccione zona primero --</option>';
+    pacienteSelect.disabled = enfermeroSelect.disabled = true;
+    if (this.value) {
+      fetchPacientes(ciudadSelect.value, this.value, pacienteInicial);
+      fetchEnfermeros(ciudadSelect.value, this.value, enfermeroInicial);
+    }
+  });
+
+  fechaInput.addEventListener('change', function() {
+    horaSelect.innerHTML = '<option value="">-- Seleccione una hora --</option>';
+    if (enfermeroSelect.value && this.value) {
+      fetchHorarios(enfermeroSelect.value, this.value, horaInicial);
+    }
+  });
+
+  enfermeroSelect.addEventListener('change', function() {
+    horaSelect.innerHTML = '<option value="">-- Seleccione una hora --</option>';
+    if (this.value && fechaInput.value) {
+      fetchHorarios(this.value, fechaInput.value, horaInicial);
+    }
+  });
+
+  // — Inicialización en modo edición
+  if (ciudadInicial) {
+    ciudadSelect.value = ciudadInicial;
+    fetchZonas(ciudadInicial, zonaInicial);
+  }
+});
+</script>
+
+{% endblock %}

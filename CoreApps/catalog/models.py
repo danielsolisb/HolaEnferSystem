@@ -1,7 +1,9 @@
+#CoreApps/catalog/models.py
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 class Service(models.Model):
+    #neptuno agregar
     nombre = models.CharField(_("Nombre del servicio"), max_length=100)
     descripcion = models.TextField(_("Descripción del servicio"), blank=True)
     precio = models.DecimalField(_("Precio"), max_digits=8, decimal_places=2)
@@ -15,6 +17,7 @@ class Service(models.Model):
         return self.nombre
 
 class Product(models.Model):
+    #neptuno agregar campo
     nombre = models.CharField(_("Nombre del producto"), max_length=100)
     descripcion = models.TextField(_("Descripción del producto"), blank=True)
     precio = models.DecimalField(_("Precio"), max_digits=8, decimal_places=2)

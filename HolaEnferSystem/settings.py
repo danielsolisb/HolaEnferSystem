@@ -26,7 +26,8 @@ SECRET_KEY = 'django-insecure-2gwl6^4&7&3v@e(xd4sl=%3%iik5wt+-w#=^729c08h*)sg629
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.ngrok-free.app']
+
 
 
 # Application definition
@@ -44,8 +45,9 @@ INSTALLED_APPS = [
     'CoreApps.catalog',
     'CoreApps.appointments',
     'CoreApps.core',
-    'django_select2',
+    #'django_select2',
     'widget_tweaks', 
+    'CoreApps.reports',
 ]
 # Configuración del modelo de usuario personalizado
 AUTH_USER_MODEL = 'users.User'
@@ -145,3 +147,8 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.ngrok-free.app'
+]
+

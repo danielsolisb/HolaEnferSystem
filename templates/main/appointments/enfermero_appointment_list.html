@@ -1,0 +1,39 @@
+{% extends 'main/dashboard.html' %}
+{% block content %}
+<div class="panel">
+    <div class="panel-heading">
+        <h3 class="panel-title">Mis Citas Asignadas</h3>
+    </div>
+    <div class="panel-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-bordered align-middle">
+                <thead>
+                    <tr>
+                        <th>Paciente</th>
+                        <th>Servicio</th>
+                        <th>Producto</th>
+                        <th>Hora</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cita in appointments %}
+                    <tr>
+                        <td>{{ cita.paciente }}</td>
+                        <td>{{ cita.servicio }}</td>
+                        <td>{{ cita.producto }}</td>
+                        <td>{{ cita.horario.fecha }} {{ cita.hora }}</td>
+                        <td>
+                            <a href="{% url 'appointments:mis-citas-detail' cita.pk %}" class="btn btn-info btn-sm">Ver Detalles</a>
+                            <a href="{% url 'reports:report-create' %}?appointment={{ cita.pk }}" class="btn btn-success btn-sm">Generar Reporte</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5">No tienes citas asignadas.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

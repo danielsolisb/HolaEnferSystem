@@ -1,0 +1,21 @@
+{% extends 'main/dashboard.html' %}
+
+{% block content %}
+<div class="panel">
+    <div class="panel-heading">
+        <h3 class="panel-title">Detalle del Reporte</h3>
+    </div>
+    <div class="panel-body">
+        <table class="table table-bordered">
+            <tr><th>Cita relacionada:</th><td>{{ report.appointment }}</td></tr>
+            <tr><th>Enfermero:</th><td>{{ report.enfermero.get_full_name }}</td></tr>
+            <tr><th>Ubicación GPS:</th><td><a href="{{ report.ubicacion_gps }}" target="_blank">Ver ubicación</a></td></tr>
+            <tr><th>Novedades:</th><td>{{ report.notas_novedades|linebreaks }}</td></tr>
+            <tr><th>Valoración:</th><td>{{ report.valoracion }}</td></tr>
+            <tr><th>Fecha y hora del reporte:</th><td>{{ report.fecha_hora_reporte }}</td></tr>
+        </table>
+        <a href="{% url 'reports:report-update' report.pk %}" class="btn btn-success">Editar</a>
+        <a href="{% url 'reports:report-list' %}" class="btn btn-secondary">Volver al listado</a>
+    </div>
+</div>
+{% endblock %}

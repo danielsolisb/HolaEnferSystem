@@ -1,7 +1,8 @@
+#CoreApps/curtomers/models.py
 from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from CoreApps.core.models import City
+from CoreApps.core.models import City, Zona
 
 class CustomerProfile(models.Model):
     nombres = models.CharField(_("Nombres"), max_length=100)
@@ -10,7 +11,15 @@ class CustomerProfile(models.Model):
     telefono = models.CharField(_("Teléfono"), max_length=20)
     email = models.EmailField(_("Correo electrónico"), blank=True, null=True)
     direccion = models.TextField(_("Dirección completa"))
+    ubicacion_mapa = models.URLField(
+        _("Ubicación en Google Maps"),
+        max_length=500,
+        blank=True,
+        null=True,
+        help_text=_("Enlace a Google Maps (https://maps.google.com/…) para esta dirección")
+    )
     ciudad = models.ForeignKey(City, on_delete=models.PROTECT, related_name='clientes', blank=True, null=True) # <-- nuevo campo
+    zona = models.ForeignKey(Zona,on_delete=models.PROTECT, related_name='clientes', verbose_name=_("Zona"), blank=True, null=True)
     fecha_nacimiento = models.DateField(_("Fecha de nacimiento"), blank=True, null=True)
     fecha_registro = models.DateTimeField(_("Fecha de registro"), auto_now_add=True)
     registrado_por = models.ForeignKey(

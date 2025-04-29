@@ -1,56 +1,69 @@
-{% extends 'main/dashboard.html' %} 
-{% load static %} 
+{% extends 'main/dashboard.html' %}
+{% load static %}
 {% load widget_tweaks %}
 
 {% block content %}
-<!--Page content-->
-<!--===================================================-->
 <div id="page-content">
   <div class="row">
     <div class="col-md-8 col-md-offset-2 col-sm-10 col-sm-offset-1">
-      <!--Panel para el formulario de cliente-->
-      <!--===================================================-->
       <div class="panel">
         <div class="panel-heading">
-          <h3 class="panel-title"><i class="demo-pli-file-jpg icon-lg"></i> Nuevo Cliente</h3>
+          <h3 class="panel-title">
+            <i class="demo-pli-file-jpg icon-lg"></i>
+            {% if form.instance.pk %}Editar Cliente{% else %}Nuevo Cliente{% endif %}
+          </h3>
         </div>
         <div class="panel-body">
           <form method="post" class="form-horizontal">
             {% csrf_token %}
-            
+            <input type="hidden" id="zona-inicial" value="{{ zona_inicial }}">
+
+            {# --- TODOS LOS CAMPOS MENOS ubicacion_mapa --- #}
             {% for field in form %}
-            <div class="form-group {% if field.errors %}has-error{% endif %}">
-              <label for="{{ field.id_for_label }}" class="col-sm-3 control-label">{{ field.label }}</label>
-              <div class="col-sm-9">
-                {% if field.field.widget.input_type == 'checkbox' %}
-                  <div class="checkbox">
-                    <label>
-                      {% render_field field %}
-                      {{ field.help_text }}
-                    </label>
+              {% if field.name != 'ubicacion_mapa' %}
+                <div class="form-group {% if field.errors %}has-error{% endif %}">
+                  <label for="{{ field.id_for_label }}" class="col-sm-3 control-label">{{ field.label }}</label>
+                  <div class="col-sm-9">
+                    {% render_field field class="form-control" %}
+                    {% if field.help_text %}
+                      <small class="help-block">{{ field.help_text }}</small>
+                    {% endif %}
+                    {% if field.errors %}
+                      <div class="help-block">
+                        {% for error in field.errors %}
+                          <p class="text-danger">{{ error }}</p>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
                   </div>
-                {% else %}
-                  {% render_field field class="form-control" %}
-                  {% if field.help_text %}
-                    <small class="help-block">{{ field.help_text }}</small>
-                  {% endif %}
+                </div>
+              {% endif %}
+            {% endfor %}
+
+            {# --- BLOQUE MAPA + INPUT ubicacion_mapa --- #}
+            <div class="form-group">
+              <label class="col-sm-3 control-label">Ubicación en el mapa</label>
+              <div class="col-sm-9">
+                <div id="map" style="height:300px; margin-bottom:10px;"></div>
+                {% render_field form.ubicacion_mapa class="form-control" %}
+                {% if form.ubicacion_mapa.help_text %}
+                  <small class="help-block">{{ form.ubicacion_mapa.help_text }}</small>
                 {% endif %}
-                
-                {% if field.errors %}
+                {% if form.ubicacion_mapa.errors %}
                   <div class="help-block">
-                    {% for error in field.errors %}
+                    {% for error in form.ubicacion_mapa.errors %}
                       <p class="text-danger">{{ error }}</p>
                     {% endfor %}
                   </div>
                 {% endif %}
               </div>
             </div>
-            {% endfor %}
-            
+
             <div class="form-group">
               <div class="col-sm-offset-3 col-sm-9">
                 <button type="submit" class="btn btn-success btn-lg">
-                  <i class="demo-pli-computer-secure icon-fw"></i> Registrar Cliente
+                  <i class="demo-pli-computer-secure icon-fw"></i>
+                  {% if form.instance.pk %}Guardar Cambios{% else %}Registrar Cliente{% endif %}
                 </button>
                 <a href="{% url 'customers:customer-list' %}" class="btn btn-danger btn-lg">
                   <i class="demo-pli-cross icon-fw"></i> Cancelar
@@ -60,11 +73,87 @@
           </form>
         </div>
       </div>
-      <!--===================================================-->
-      <!--End Panel-->
     </div>
   </div>
 </div>
-<!--===================================================-->
-<!--End page content-->
+
+{# --- Leaflet CSS/JS desde CDN --- #}
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // --- ZONAS DINÁMICAS ---
+    const ciudadSel = document.getElementById('id_ciudad');
+    const zonaSel   = document.getElementById('id_zona');
+    const loader    = document.createElement('div');
+    loader.id       = 'loader-zonas';
+    loader.style    = 'display:none;margin-top:5px;';
+    loader.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando zonas...';
+    zonaSel.parentNode.appendChild(loader);
+    const initialCity = ciudadSel.value;
+    const initialZona = document.getElementById('zona-inicial').value;
+    function fetchZonas(ciudadId, preselect=null) {
+        loader.style.display = 'block';
+        fetch("{% url 'customers:api-obtener-zonas' %}?ciudad_id=" + ciudadId)
+          .then(r => r.json())
+          .then(data => {
+            zonaSel.innerHTML = '<option value="">-- Seleccione una zona --</option>';
+            data.forEach(z => zonaSel.append(new Option(z.nombre, z.id)));
+            if (preselect) zonaSel.value = preselect;
+          })
+          .catch(console.error)
+          .finally(() => loader.style.display = 'none');
+    }
+    ciudadSel.addEventListener('change', function() {
+        zonaSel.innerHTML = '<option value="">-- Seleccione una zona --</option>';
+        if (this.value) fetchZonas(this.value);
+        // --- GEOLOCALIZAR CIUDAD Y CENTRAR MAPA ---
+        const cityName = this.options[this.selectedIndex].text;
+        if (cityName) {
+          fetch(`https://nominatim.openstreetmap.org/search?city=${encodeURIComponent(cityName)}&format=json&limit=1`)
+            .then(res => res.json())
+            .then(arr => {
+              if (arr.length) {
+                const lat = parseFloat(arr[0].lat),
+                      lon = parseFloat(arr[0].lon);
+                map.setView([lat, lon], 12);
+              }
+            })
+            .catch(console.error);
+        }
+    });
+    if (initialCity) fetchZonas(initialCity, initialZona);
+
+    // --- INICIALIZAR MAPA LEAFLET ---
+    const mapEl    = document.getElementById('map');
+    const urlInput = document.getElementById('id_ubicacion_mapa');
+    let marker, map;
+    let initLatLng=[0,0];
+    if (urlInput.value) {
+      const m = urlInput.value.match(/q=([-\d\.]+),([-\d\.]+)/);
+      if (m) initLatLng=[+m[1], +m[2]];
+    }
+    map = L.map(mapEl).setView(initLatLng, (initLatLng[0]===0&&initLatLng[1]===0)?2:15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ attribution:'&copy; OSM' }).addTo(map);
+    if (initLatLng[0]||initLatLng[1]) {
+      marker = L.marker(initLatLng, {draggable:true}).addTo(map)
+        .on('dragend', e=>{
+          const {lat,lng}=e.target.getLatLng();
+          urlInput.value=`https://www.google.com/maps?q=${lat},${lng}`;
+        });
+    }
+    // Al hacer clic en el mapa
+    map.on('click', function(e) {
+      const {lat,lng}=e.latlng;
+      if (marker) map.removeLayer(marker);
+      marker = L.marker([lat,lng],{draggable:true}).addTo(map)
+        .on('dragend', ev=>{
+          const {lat,lng}=ev.target.getLatLng();
+          urlInput.value=`https://www.google.com/maps?q=${lat},${lng}`;
+        });
+      urlInput.value=`https://www.google.com/maps?q=${lat},${lng}`;
+    });
+});
+</script>
 {% endblock %}

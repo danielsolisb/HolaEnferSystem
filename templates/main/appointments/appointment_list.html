@@ -12,45 +12,72 @@
         </a>
         <br><br>
         <table class="table table-striped" id="appointment-table">
-            <thead>
-                <tr>
-                    <th>Paciente</th>
-                    <th>Servicio</th>
-                    <th>Hora</th>
-                    <th>Enfermero</th>
-                    <th>Estado</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for appointment in appointments %}
-                <tr>
-                    <td>{{ appointment.paciente }}</td>
-                    <td>{{ appointment.servicio }}</td>
-                    <td>{{ appointment.horario.fecha }} {{ appointment.hora }}</td>
-                    <td>{{ appointment.horario.enfermero.nombres }}</td>
-                    <td>{{ appointment.estado }}</td>
-                    <td>
-                        <div class="btn-group">
-                            <a href="{% url 'appointments:appointment-detail' appointment.pk %}" class="btn btn-sm btn-default btn-hover-primary" title="Ver">
-                                <i class="demo-pli-receipt-4"></i>
-                            </a>
-                            <a href="{% url 'appointments:appointment-update' appointment.pk %}" class="btn btn-sm btn-default btn-hover-success" title="Editar">
-                                <i class="demo-pli-pen-5"></i>
-                            </a>
-                            <a href="{% url 'appointments:appointment-delete' appointment.pk %}" class="btn btn-sm btn-default btn-hover-danger" title="Eliminar">
-                                <i class="demo-pli-trash"></i>
-                            </a>
-                        </div>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="6">No hay citas registradas.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <thead>
+        <tr>
+            <th>Paciente</th>
+            <th>Servicio</th>
+            <th>Hora</th>
+            <th>Enfermero</th>
+            <th>Estado</th>
+            <th>Ubicación (Mapa)</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for appointment in appointments %}
+        <tr>
+            <td>{{ appointment.paciente }}</td>
+            <td>{{ appointment.servicio }}</td>
+            <td>{{ appointment.horario.fecha }} {{ appointment.hora }}</td>
+            <td>{{ appointment.horario.enfermero.nombres }}</td>
+            <td>{{ appointment.estado }}</td>
+            <td>
+                {% if appointment.mapa_ubicacion %}
+                    <a href="{{ appointment.mapa_ubicacion }}" target="_blank">Ver en mapa</a>
+                {% else %}
+                    No disponible
+                {% endif %}
+            </td>
+            <td>
+                <div class="btn-group">
+                    <a href="{% url 'appointments:appointment-detail' appointment.pk %}" class="btn btn-sm btn-default btn-hover-primary" title="Ver">
+                        <i class="demo-pli-receipt-4"></i>
+                    </a>
+                    <a href="{% url 'appointments:appointment-update' appointment.pk %}" class="btn btn-sm btn-default btn-hover-success" title="Editar">
+                        <i class="demo-pli-pen-5"></i>
+                    </a>
+                    <a href="{% url 'appointments:appointment-delete' appointment.pk %}" class="btn btn-sm btn-default btn-hover-danger" title="Eliminar">
+                        <i class="demo-pli-trash"></i>
+                    </a>
+                </div>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="7">No hay citas registradas.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
     </div>
 </div>
+
+<!-- DataTables CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/2.0.5/css/dataTables.bootstrap5.min.css">
+
+<!-- DataTables JS -->
+<script src="https://cdn.datatables.net/2.0.5/js/dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/2.0.5/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    $('#appointment-table').DataTable({
+        language: {
+            url: "//cdn.datatables.net/plug-ins/2.0.5/i18n/es-ES.json"
+        }
+    });
+});
+</script>
+
 {% endblock %}

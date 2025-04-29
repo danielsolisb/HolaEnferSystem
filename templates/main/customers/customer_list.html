@@ -1,9 +1,7 @@
-{% extends 'main/dashboard.html' %} 
-{% load static %} 
+{% extends 'main/dashboard.html' %}
+{% load static %}
 
 {% block content %}
-<!--Page content-->
-<!--===================================================-->
 <div class="panel">
     <div class="panel-heading">
         <h3 class="panel-title">{{ subtitle }}</h3>
@@ -34,29 +32,37 @@
                         <th>Teléfono</th>
                         <th>Dirección</th>
                         <th>Ciudad</th>
-                        <th>Fecha de Registro</th>
+                        <th>Zona</th>
+                        <th>Ubicación</th>
                         <th class="min-tablet">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for customer in customers %}
-                    <tr>                        
+                    <tr>
                         <td>{{ customer.nombres }}</td>
                         <td>{{ customer.apellidos }}</td>
                         <td>{{ customer.cedula }}</td>
                         <td>{{ customer.telefono }}</td>
                         <td>{{ customer.direccion }}</td>
                         <td>{{ customer.ciudad.nombre }}</td>
-                        <td>{{ customer.fecha_registro|date:"d/m/Y" }}</td>
+                        <td>{{ customer.zona.nombre }}</td>
+                        <td>
+                            {% if customer.ubicacion_mapa %}
+                                <a href="{{ customer.ubicacion_mapa }}" target="_blank">Ver Mapa</a>
+                            {% else %}
+                                &mdash;
+                            {% endif %}
+                        </td>
                         <td>
                             <div class="btn-group">
-                                <a href="{% url 'customers:customer-detail' customer.id %}" class="btn btn-sm btn-default btn-hover-primary" data-toggle="tooltip" data-original-title="Detalles">
+                                <a href="{% url 'customers:customer-detail' customer.id %}" class="btn btn-sm btn-default btn-hover-primary" data-toggle="tooltip" title="Detalles">
                                     <i class="demo-pli-receipt-4"></i>
                                 </a>
-                                <a href="{% url 'customers:customer-update' customer.id %}" class="btn btn-sm btn-default btn-hover-success" data-toggle="tooltip" data-original-title="Editar">
+                                <a href="{% url 'customers:customer-update' customer.id %}" class="btn btn-sm btn-default btn-hover-success" data-toggle="tooltip" title="Editar">
                                     <i class="demo-pli-pen-5"></i>
                                 </a>
-                                <a href="{% url 'customers:customer-delete' customer.id %}" class="btn btn-sm btn-default btn-hover-danger" data-toggle="tooltip" data-original-title="Eliminar">
+                                <a href="{% url 'customers:customer-delete' customer.id %}" class="btn btn-sm btn-default btn-hover-danger" data-toggle="tooltip" title="Eliminar">
                                     <i class="demo-pli-trash"></i>
                                 </a>
                             </div>
@@ -64,7 +70,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" class="text-center">No hay clientes registrados.</td>
+                        <td colspan="9" class="text-center">No hay clientes registrados.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -72,29 +78,21 @@
         </div>
     </div>
 </div>
-<!--===================================================-->
-<!--End page content-->
 {% endblock %}
 
 {% block script %}
 <script>
     $(document).ready(function() {
-        // Inicializar DataTable
         $('#demo-dt-basic').DataTable({
-            "responsive": true,
-            "language": {
-                "url": "//cdn.datatables.net/plug-ins/1.10.25/i18n/Spanish.json"
+            responsive: true,
+            language: {
+                url: "//cdn.datatables.net/plug-ins/1.10.25/i18n/Spanish.json"
             }
         });
-        
-        // Inicializar tooltips
         $('[data-toggle="tooltip"]').tooltip();
-        
-        // Búsqueda en tiempo real
         $('#demo-input-search2').on('keyup', function() {
-            $('#demo-dt-basic').DataTable().search($(this).val()).draw();
+            $('#demo-dt-basic').DataTable().search(this.value).draw();
         });
     });
 </script>
-
 {% endblock %}

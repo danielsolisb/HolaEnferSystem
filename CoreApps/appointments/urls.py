@@ -15,7 +15,10 @@ urlpatterns = [
     path('horarios/eliminar/<int:pk>/', views.ScheduleDeleteView.as_view(), name='eliminar-horario'),
     path('api/pacientes/', views.obtener_pacientes_por_ciudad, name='api-obtener-pacientes'),
     path('api/horarios/', views.obtener_horarios_por_enfermero, name='api-obtener-horarios'),
+    path('api/enfermeros/', views.obtener_enfermeros_por_ciudad, name='api-enfermeros'),
 
+    path('mis-citas/', views.AssignedAppointmentListView.as_view(), name='mis-citas'),
+    path('mis-citas/<int:pk>/', views.AssignedAppointmentDetailView.as_view(), name='mis-citas-detail'),
 
 
 ]

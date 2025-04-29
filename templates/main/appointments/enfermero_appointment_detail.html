@@ -1,0 +1,22 @@
+{% extends 'main/dashboard.html' %}
+{% block content %}
+<div class="panel">
+    <div class="panel-heading">
+        <h3 class="panel-title">Detalle de la Cita</h3>
+    </div>
+    <div class="panel-body">
+        <ul class="list-group">
+            <li class="list-group-item"><strong>Paciente:</strong> {{ appointment.paciente }}</li>
+            <li class="list-group-item"><strong>Servicio:</strong> {{ appointment.servicio }}</li>
+            <li class="list-group-item"><strong>Producto:</strong> {{ appointment.producto }}</li>
+            <li class="list-group-item"><strong>Dirección:</strong> {{ appointment.ubicacion }}</li>
+            <li class="list-group-item">
+                <strong>Mapa:</strong> <a href="{{ appointment.mapa_ubicacion }}" target="_blank">Ver ubicación</a>
+            </li>
+            <li class="list-group-item"><strong>Fecha y Hora:</strong> {{ appointment.horario.fecha }} {{ appointment.hora }}</li>
+        </ul>
+        <a href="{% url 'reports:report-create' %}?appointment={{ appointment.pk }}" class="btn btn-success">Generar Reporte</a>
+        <a href="{% url 'appointments:mis-citas' %}" class="btn btn-secondary">Volver a mis citas</a>
+    </div>
+</div>
+{% endblock %}

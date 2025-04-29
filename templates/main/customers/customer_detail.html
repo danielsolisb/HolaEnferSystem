@@ -1,77 +1,62 @@
-{% extends 'main/dashboard.html' %} 
-{% load static %} 
+{% extends 'main/dashboard.html' %}
+{% load static %}
 
 {% block content %}
-<!--Page content-->
-<!--===================================================-->
 <div id="page-content">
-  <!--Activated Users Chart-->
-  <!--===================================================-->
   <div class="panel">
     <div class="panel-body">
-   
-   <h2>Detalles del Cliente</h2>
-    <table class="table table-bordered">
+      <h2>Detalles del Cliente</h2>
+      <table class="table table-bordered">
         <tr>
-            <th>Cédula</th>
-            <td>{{ customer.cedula }}</td>
+          <th>Cédula</th>
+          <td>{{ customer.cedula }}</td>
         </tr>
         <tr>
-            <th>Nombres completos</th>
-            <td>{{ customer.nombres }}</td>
+          <th>Nombres completos</th>
+          <td>{{ customer.nombres }}</td>
         </tr>
         <tr>
-            <th>Teléfono</th>
-            <td>{{ customer.telefono }}</td>
+          <th>Teléfono</th>
+          <td>{{ customer.telefono }}</td>
         </tr>
         <tr>
-            <th>Email</th>
-            <td>{{ customer.email }}</td>
+          <th>Email</th>
+          <td>{{ customer.email }}</td>
         </tr>
         <tr>
-            <th>Dirección</th>
-            <td>{{ customer.direccion }}</td>
+          <th>Dirección</th>
+          <td>{{ customer.direccion }}</td>
         </tr>
         <tr>
-            <th>Ciudad</th>
-            <td>{{ customer.ciudad.nombre }}</td>
+          <th>Ciudad</th>
+          <td>{{ customer.ciudad.nombre }}</td>
         </tr>
         <tr>
-            <th>Fecha de nacimiento</th>
-            <td>{{ customer.fecha_nacimiento }}</td>
+          <th>Zona</th>
+          <td>{{ customer.zona.nombre }}</td>
         </tr>
         <tr>
-            <th>Registrado por</th>
-            <td>{{ customer.registrado_por.nombres }} ({{ customer.registrado_por.email }})</td>
+          <th>Ubicación en Mapas</th>
+          <td>
+            {% if customer.ubicacion_mapa %}
+              <a href="{{ customer.ubicacion_mapa }}" target="_blank">Abrir en Google Maps</a>
+            {% else %}
+              &mdash;
+            {% endif %}
+          </td>
         </tr>
         <tr>
-            <th>Fecha de registro</th>
-            <td>{{ customer.fecha_registro }}</td>
+          <th>Fecha de nacimiento</th>
+          <td>{{ customer.fecha_nacimiento }}</td>
         </tr>
-    </table>
+        <tr>
+          <th>Registrado por</th>
+          <td>{{ customer.registrado_por.nombres }} ({{ customer.registrado_por.email }})</td>
+        </tr>
+      </table>
 
-    <h3>Historial Médico</h3>
-    {% if customer.medical_histories.exists %}
-        <ul class="list-group">
-            {% for history in customer.medical_histories.all %}
-                <li class="list-group-item">
-                    <strong>{{ history.fecha_registro|date:"d-m-Y H:i" }}:</strong>
-                    {{ history.descripcion }}
-                </li>
-            {% endfor %}
-        </ul>
-    {% else %}
-        <p class="text-muted">No existe historial médico registrado.</p>
-    {% endif %}
-
-    <a href="{% url 'customers:customer-list' %}" class="btn btn-primary mt-3">Volver a lista de clientes</a>
-
-
+      <a href="{% url 'customers:customer-list' %}" class="btn btn-primary mt-3">Volver a lista de clientes</a>
     </div>
   </div>
-  <!--===================================================-->
-  <!--End Activated Users chart-->
 </div>
-<!--===================================================-->
-<!--End page content-->
 {% endblock %}

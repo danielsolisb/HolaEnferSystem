@@ -19,6 +19,17 @@
             </tr>
             <tr><th>Enfermero:</th><td>{{ appointment.horario.enfermero.nombres }}</td></tr>
             <tr><th>Horario:</th><td>{{ appointment.horario.fecha }} de {{ appointment.horario.hora_inicio }} a {{ appointment.horario.hora_fin }}</td></tr>
+            <tr>
+                <th>Ubicación en mapa:</th>
+                <td>
+                    {% if appointment.mapa_ubicacion %}
+                        <a href="{{ appointment.mapa_ubicacion }}" target="_blank">{{ appointment.mapa_ubicacion }}</a>
+                    {% else %}
+                        No disponible
+                    {% endif %}
+                </td>
+            </tr>
+            
             <tr><th>Hora asignada:</th><td>{{ appointment.hora }}</td></tr>
             <tr><th>Estado:</th><td>{{ appointment.estado }}</td></tr>
             <tr><th>Asignado por:</th><td>{{ appointment.asignado_por }}</td></tr>

@@ -18,13 +18,16 @@ class ScheduleAdmin(admin.ModelAdmin):
 
 @admin.register(Appointment)
 class AppointmentAdmin(admin.ModelAdmin):
-    list_display    = (
+    list_display = (
         'paciente',
         'servicio',
-        'enfermero',  # ← nuevo campo aquí
+        'enfermero',
         'horario',
-        'hora',               # ← muestra la hora exacta
+        'hora',
         'estado',
+        'tipo_ubicacion',  # Nuevo campo en admin
+        'ubicacion',
+        'mapa_ubicacion',  # Añadido aquí también
         'asignado_por',
         'fecha_creacion',
     )
@@ -53,14 +56,17 @@ class AppointmentAdmin(admin.ModelAdmin):
     )
     #filter_horizontal = ('producto',)  # ← Esto activa un widget útil para seleccionar productos M2M
     fieldsets = (
-        (None, {
-            'fields': (
+    (None, {
+        'fields': (
                 'paciente',
-                'enfermero',  # ← nuevo campo aquí
+                'enfermero',
                 'servicio',
                 'producto',
+                'tipo_ubicacion',
+                'ubicacion',
+                'mapa_ubicacion',  # Añadido aquí también
                 'horario',
-                'hora',           # ← aquí también
+                'hora',
                 'estado',
                 'asignado_por',
                 'notas',

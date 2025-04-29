@@ -9,7 +9,11 @@ class CustomUserCreationForm(UserCreationForm):
     """
     class Meta:
         model = User
-        fields = ('email', 'cedula', 'nombres', 'telefono', 'rol')
+        #fields = ('email', 'cedula', 'nombres', 'telefono', 'rol')
+        fields = (
+            'email','cedula','nombres','telefono',
+            'rol','ciudad','zonas'
+        )
         
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -18,6 +22,8 @@ class CustomUserCreationForm(UserCreationForm):
         self.fields['nombres'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Nombres completos'})
         self.fields['telefono'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Número de teléfono'})
         self.fields['rol'].widget.attrs.update({'class': 'form-select'})
+        self.fields['ciudad'].widget.attrs.update({'class':'form-select'})
+        self.fields['zonas'].widget.attrs.update({'class':'form-select'})
 
 class CustomUserChangeForm(UserChangeForm):
     """
@@ -25,7 +31,11 @@ class CustomUserChangeForm(UserChangeForm):
     """
     class Meta:
         model = User
-        fields = ('email', 'cedula', 'nombres', 'telefono', 'rol')
+        #fields = ('email', 'cedula', 'nombres', 'telefono', 'rol')
+        fields = (
+            'email','cedula','nombres','telefono',
+            'rol','ciudad','zonas'
+        )
         
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -34,3 +44,5 @@ class CustomUserChangeForm(UserChangeForm):
         self.fields['nombres'].widget.attrs.update({'class': 'form-control'})
         self.fields['telefono'].widget.attrs.update({'class': 'form-control'})
         self.fields['rol'].widget.attrs.update({'class': 'form-select'})
+        self.fields['ciudad'].widget.attrs.update({'class':'form-select'})
+        self.fields['zonas'].widget.attrs.update({'class':'form-select'})

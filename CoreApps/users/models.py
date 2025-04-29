@@ -1,7 +1,8 @@
+#CoreApps/users/models.py
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from CoreApps.core.models import City
+from CoreApps.core.models import City, Zona
 
 class UserManager(BaseUserManager):
     """
@@ -54,7 +55,8 @@ class User(AbstractUser):
     rol = models.CharField(_('rol'), max_length=20, choices=ROL_CHOICES, default='enfermero')
     profile_image = models.ImageField(upload_to='profile_images/', null=True, blank=True, verbose_name=_('foto de perfil'))
     ciudad = models.ForeignKey(City, on_delete=models.PROTECT, related_name='usuarios', blank=True, null=True) # <-- nuevo campo
-    
+    #zona = models.ForeignKey(Zona, on_delete=models.PROTECT, related_name='enfermeros', verbose_name=_("Zona"), blank=True, null=True) 
+    zonas = models.ManyToManyField(Zona, related_name='enfermeros', verbose_name=_("Zonas"), blank=True)
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['cedula', 'nombres', 'rol']
     

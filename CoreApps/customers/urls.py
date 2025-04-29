@@ -9,4 +9,5 @@ urlpatterns = [
     path('detalle/<int:pk>/', views.CustomerDetailView.as_view(), name='customer-detail'),
     path('editar/<int:pk>/', views.CustomerUpdateView.as_view(), name='customer-update'),
     path('eliminar/<int:pk>/', views.CustormerDeleteView.as_view(), name='customer-delete'),
+    path('api/zonas/', views.obtener_zonas_por_ciudad, name='api-obtener-zonas'),
 ]

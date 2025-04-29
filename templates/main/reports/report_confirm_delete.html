@@ -1,0 +1,17 @@
+{% extends 'main/dashboard.html' %}
+
+{% block content %}
+<div class="panel">
+    <div class="panel-heading">
+        <h3 class="panel-title">Confirmar eliminación de Reporte</h3>
+    </div>
+    <div class="panel-body">
+        <p>¿Estás seguro de que deseas eliminar el reporte para la cita <strong>{{ report.appointment }}</strong> realizado por <strong>{{ report.enfermero }}</strong>?</p>
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Sí, eliminar</button>
+            <a href="{% url 'reports:report-list' %}" class="btn btn-secondary">Cancelar</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

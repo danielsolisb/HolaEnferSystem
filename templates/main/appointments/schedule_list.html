@@ -1,55 +1,66 @@
 {% extends 'main/dashboard.html' %}
 {% load static %}
-
 {% block content %}
 <div class="panel">
-    <div class="panel-heading">
-        <h3 class="panel-title">Mis horarios disponibles</h3>
-    </div>
-    <div class="panel-body">
-        <a href="{% url 'appointments:nuevo-horario' %}" class="btn btn-primary btn-labeled">
-            <i class="btn-label demo-pli-add"></i> Registrar nuevo horario
-        </a>
-        
-        <br><br>
+  <div class="panel-heading">
+    <h3 class="panel-title">Mis horarios disponibles</h3>
+  </div>
+  <div class="panel-body">
+    <a href="{% url 'appointments:nuevo-horario' %}" class="btn btn-primary btn-labeled">
+      <i class="btn-label demo-pli-add"></i> Registrar nuevo horario
+    </a>
 
-<table class="table table-bordered table-striped mt-3">
-    <thead>
+    <form method="get" class="d-inline-block float-right">
+      <label for="filter-date">Ver fecha:</label>
+      <input
+        type="date"
+        id="filter-date"
+        name="date"
+        value="{{ selected_date }}"
+        class="form-control d-inline-block"
+        style="width:auto;"
+        onchange="this.form.submit()"
+      >
+    </form>
+
+    <div class="clearfix"></div>
+    <br>
+
+    <table class="table table-bordered table-striped mt-3">
+      <thead>
         <tr>
-            <th>Fecha</th>
-            <th>Hora inicio</th>
-            <th>Hora fin</th>
-            <th>Disponible</th>
-            <th>Acciones</th>
+          <th>Fecha</th>
+          <th>Hora inicio</th>
+          <th>Hora fin</th>
+          <th>Disponible</th>
+          <th>Acciones</th>
         </tr>
-    </thead>
-    <tbody>
+      </thead>
+      <tbody>
         {% for horario in horarios %}
-            <tr>
-                <td>{{ horario.fecha }}</td>
-                <td>{{ horario.hora_inicio }}</td>
-                <td>{{ horario.hora_fin }}</td>
-                <td>
-                    {% if horario.disponible %}
-                        <span class="badge bg-success">Sí</span>
-                    {% else %}
-                        <span class="badge bg-secondary">No</span>
-                    {% endif %}
-                </td>
-                <td>
-                    <a href="{% url 'appointments:editar-horario' horario.id %}" class="btn btn-sm btn-warning">Editar</a>
-                    <a href="{% url 'appointments:eliminar-horario' horario.id %}" class="btn btn-sm btn-danger" onclick="return confirm('¿Seguro que deseas eliminar este horario?')">Eliminar</a>
-                </td>
-            </tr>
+          <tr>
+            <td>{{ horario.fecha }}</td>
+            <td>{{ horario.hora_inicio }}</td>
+            <td>{{ horario.hora_fin }}</td>
+            <td>
+              {% if horario.disponible %}
+                <span class="badge bg-success">Sí</span>
+              {% else %}
+                <span class="badge bg-secondary">No</span>
+              {% endif %}
+            </td>
+            <td>
+              <a href="{% url 'appointments:editar-horario' horario.id %}" class="btn btn-sm btn-warning">Editar</a>
+              <a href="{% url 'appointments:eliminar-horario' horario.id %}" class="btn btn-sm btn-danger" onclick="return confirm('¿Seguro que deseas eliminar este horario?')">Eliminar</a>
+            </td>
+          </tr>
         {% empty %}
-            <tr>
-                <td colspan="5">No has registrado horarios aún.</td>
-            </tr>
+          <tr>
+            <td colspan="5">No hay horarios para esta fecha.</td>
+          </tr>
         {% endfor %}
-    </tbody>
-</table>
-
-
-    </div>
+      </tbody>
+    </table>
+  </div>
 </div>
 {% endblock %}

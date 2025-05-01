@@ -9,14 +9,13 @@
         <a href="{% url 'reports:report-create' %}" class="btn btn-primary mb-3">Nuevo Reporte</a>
         
         <!-- Aquí la tabla responsive -->
-        <div class="table-responsive">
+        <!--<div class="table-responsive">-->
             <table class="table table-striped table-bordered align-middle">
                 <thead>
                     <tr>
                         <th>Cita</th>
                         <th>Enfermero</th>
                         <th>Fecha y Hora</th>
-                        <th>Valoración</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
@@ -26,7 +25,6 @@
                         <td>{{ report.appointment }}</td>
                         <td>{{ report.enfermero.get_full_name }}</td>
                         <td>{{ report.fecha_hora_reporte }}</td>
-                        <td>{{ report.valoracion }}</td>
                         <td>
                             <a href="{% url 'reports:report-detail' report.pk %}" class="btn btn-sm btn-info">Ver</a>
                             <a href="{% url 'reports:report-update' report.pk %}" class="btn btn-sm btn-success">Editar</a>
@@ -40,7 +38,7 @@
                     {% endfor %}
                 </tbody>
             </table>
-        </div> <!-- Fin tabla responsive -->
+        <!--</div> <!-- Fin tabla responsive -->
     </div>
 </div>
 {% endblock %}

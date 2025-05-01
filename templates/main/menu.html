@@ -43,6 +43,7 @@
                                         </a>
                                     </div>
                                     <div id="profile-nav" class="collapse list-group bg-trans">
+                                    <!--
                                         <a href="#" class="list-group-item">
                                             <i class="demo-pli-male icon-lg icon-fw"></i> View Profile
                                         </a>
@@ -52,7 +53,8 @@
                                         <a href="#" class="list-group-item">
                                             <i class="demo-pli-information icon-lg icon-fw"></i> Help
                                         </a>
-                                        <a href="#" class="list-group-item">
+                                    -->
+                                        <a href="{%url 'logout'%}" class="list-group-item">
                                             <i class="demo-pli-unlock icon-lg icon-fw"></i> Logout
                                         </a>
                                     </div>
@@ -61,6 +63,7 @@
 
                                 <!--Shortcut buttons-->
                                 <!--================================-->
+                                <!--
                                 <div id="mainnav-shortcut" class="hidden">
                                     <ul class="list-unstyled shortcut-wrap">
                                         <li class="col-xs-3" data-content="My Profile">
@@ -93,6 +96,7 @@
                                         </li>
                                     </ul>
                                 </div>
+                                -->
                                 <!--================================-->
                                 <!--End shortcut buttons-->
 
@@ -120,7 +124,7 @@
 						
 						            <!--Menu list item-->
 									
-
+                                {% if user.rol == 'operador' or user.rol == 'administrador' %}
 						            <li>
 						                <a href="#">
 						                    <i class="demo-pli-list-view"></i>
@@ -135,9 +139,11 @@
                                             <li><a href="{%url 'customers:customer-list'%}">Lista de clientes</a></li>
 						                </ul>
 						            </li>
-						
+                                {% endif %}
+
 						            <!--Menu list item-->
-						            <li>
+						        {% if user.rol == 'administrador' %}
+                                    <li>
 						                <a href="#">
 						                    <i class="demo-psi-monitor-2"></i>
 						                    <span class="menu-title">Catálogo</span>
@@ -151,7 +157,8 @@
                                             <li><a href="{%url 'catalog:product-list'%}">Lista de productos</a></li>
 						                </ul>
 						            </li>
-						
+                                {% endif %} 
+
 						            <!--Menu list item-->
 						            <li>
 						                <a href="#">
@@ -162,16 +169,22 @@
 						
 						                <!--Submenu-->
 						                <ul class="collapse">
+                                            {% if user.rol == 'operador' or user.rol == 'administrador' %}	
                                             <li><a href="{%url 'appointments:appointment-list'%}">Lista de citas</a></li>
-						                    <li><a href="{%url 'appointments:appointment-create'%}">Nueva cita</a></li>	
+						                    <li><a href="{%url 'appointments:appointment-create'%}">Nueva cita</a></li>
+                                            {% endif %}
+                                            {% if user.rol == 'enfermero' or user.rol == 'administrador' %}	
                                             <li><a href="{%url 'appointments:nuevo-horario'%}">Establecer Horarios</a></li>	
-                                            <li><a href="{%url 'appointments:mis-horarios'%}">Mis Horarios</a></li>			
-                                            <li><a href="{%url 'appointments:mis-citas'%}">Mis citas</a></li>				
+                                            <li><a href="{%url 'appointments:mis-horarios'%}">Mis Horarios</a></li>	
+                                            {% endif %}
+                                            {% if user.rol == 'enfermero' or user.rol == 'administrador' %}		
+                                            <li><a href="{%url 'appointments:mis-citas'%}">Mis citas</a></li>	
+                                            {% endif %}			
                                             							
 						                </ul>
 						            </li>
 											            			
-
+                                {% if user.rol == 'enfermero' or user.rol == 'administrador' %}
                                     <li>
 						                <a href="#">
 						                    <i class="demo-pli-information"></i>
@@ -184,7 +197,8 @@
                                             <li><a href="{%url 'reports:report-list'%}">Lista de reportes</a></li>
 						                    <li><a href="{%url 'reports:report-create'%}">Nuevo Reporte</a></li>										
 						                </ul>
-						            </li>		            
+						            </li>		    
+                                {% endif %}        
 						
 						            <!--Menu list item-->
 						            <li>

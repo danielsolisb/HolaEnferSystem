@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+
 {% load static %}
 {% load widget_tweaks %}
 
@@ -7,55 +8,47 @@
 {% endblock %}
 
 {% block content %}
-<div class="login-container">
-    <div class="login-card">
-        <div class="welcome-section">
-            <h1>WELCOME</h1>
-            <p>Sistema de agendamiento y gestion de personal HolaEnfermera</p>
-        </div>
-        <div class="form-section">
-            <h2>Sign in</h2>
-            <form method="post">
-                {% csrf_token %}
-                {% if form.errors %}
-                <div class="alert alert-danger">
-                    <p>Usuario o contraseña incorrectos</p>
-                </div>
-                {% endif %}
-                
-                <div class="form-group">
-                    <label for="id_username">
-                        <i class="fas fa-user"></i>
-                        Email
-                    </label>
-                    {% render_field form.username class="form-control" placeholder="Email" %}
-                </div>
+<div class="login-page">
+  <div class="login-box">
+    <!-- Logo (puedes sustituir por tu SVG/PNG) -->
+    <img src="{% static 'img/logo-hola-enfermera.png' %}" alt="¡HolaEnfermera!" class="login-logo">
 
-                <div class="form-group">
-                    <label for="id_password">
-                        <i class="fas fa-lock"></i>
-                        Password
-                    </label>
-                    {% render_field form.password class="form-control" placeholder="Password" %}
-                    <a href="#" class="forgot-password">Forgot Password?</a>
-                </div>
+    <form method="post" class="login-form">
+      {% csrf_token %}
+      {% if form.errors %}
+        <div class="error">Usuario o contraseña incorrectos</div>
+      {% endif %}
 
-                <div class="form-group remember-me">
-                    <label>
-                        <input type="checkbox"> Remember me
-                    </label>
-                </div>
+      <div class="input-group">
+        <input
+          type="email"
+          name="username"
+          id="id_username"
+          class="form-control"
+          placeholder="Correo electrónico"
+          required
+        >
+      </div>
 
-                <button type="submit" class="sign-in-btn">Sign in</button>
-                
-                <div class="alternate-signin">
-                    <button type="button" class="alternate-btn">Sign in with other</button>
-                </div>
-            </form>
-            <div class="signup-link">
-                Don't have an account? <a href="{% url 'signup' %}">Sign Up</a>
-            </div>
-        </div>
-    </div>
+      <div class="input-group">
+        <input
+          type="password"
+          name="password"
+          id="id_password"
+          class="form-control"
+          placeholder="Contraseña"
+          required
+        >
+      </div>
+
+      <button type="submit" class="btn-submit">Ingresar</button>
+      <!--      
+      <p class="signup-link">
+        ¿No tienes cuenta? <a href="{% url 'signup' %}">Regístrate aquí</a>
+      </p>
+      -->
+
+    </form>
+  </div>
 </div>
 {% endblock %}

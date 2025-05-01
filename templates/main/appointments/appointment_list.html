@@ -11,6 +11,7 @@
             <i class="btn-label demo-pli-add"></i> Nueva Cita
         </a>
         <br><br>
+        <div class="table-responsive">
         <table class="table table-striped" id="appointment-table">
     <thead>
         <tr>
@@ -59,6 +60,7 @@
         {% endfor %}
     </tbody>
 </table>
+</div>
 
     </div>
 </div>
@@ -70,9 +72,19 @@
 <script src="https://cdn.datatables.net/2.0.5/js/dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/2.0.5/js/dataTables.bootstrap5.min.js"></script>
 
+<!-- después de tu bootstrap.css y dataTables.bootstrap5.css -->
+<link rel="stylesheet"
+      href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
+
+<!-- después de dataTables.bootstrap5.js -->
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
+
+
 <script>
 document.addEventListener('DOMContentLoaded', function(){
     $('#appointment-table').DataTable({
+        responsive: true,
         language: {
             url: "//cdn.datatables.net/plug-ins/2.0.5/i18n/es-ES.json"
         }

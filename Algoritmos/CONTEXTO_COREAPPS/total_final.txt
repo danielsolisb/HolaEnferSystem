@@ -1,0 +1,1844 @@
+"appointments_admin.txt"
+from django.contrib import admin
+from django.utils.translation import gettext_lazy as _
+from .models import AppointmentStatus, Schedule, Appointment
+
+@admin.register(AppointmentStatus)
+class AppointmentStatusAdmin(admin.ModelAdmin):
+    list_display    = ('nombre', 'descripcion')
+    search_fields   = ('nombre',)
+    ordering        = ('nombre',)
+
+@admin.register(Schedule)
+class ScheduleAdmin(admin.ModelAdmin):
+    list_display    = ('enfermero', 'fecha', 'hora_inicio', 'hora_fin', 'disponible')
+    list_filter     = ('enfermero', 'fecha', 'disponible')
+    search_fields   = ('enfermero__nombres',)
+    date_hierarchy  = 'fecha'
+    raw_id_fields   = ('enfermero',)
+
+@admin.register(Appointment)
+class AppointmentAdmin(admin.ModelAdmin):
+    list_display = (
+        'paciente',
+        'servicio',
+        'enfermero',
+        'horario',
+        'hora',
+        'estado',
+        'tipo_ubicacion',  # Nuevo campo en admin
+        'ubicacion',
+        'mapa_ubicacion',  # Añadido aquí también
+        'asignado_por',
+        'fecha_creacion',
+    )
+    list_filter     = (
+        'estado',
+        'enfermero',  # ← nuevo campo aquí
+        'horario__fecha',
+        'horario__enfermero',
+        'asignado_por',
+    )
+    search_fields   = (
+        'paciente__nombres',
+        'servicio__nombre',
+        'asignado_por__email',
+        'enfermero__email',  # ← puedes buscar por email del enfermero
+    )
+    date_hierarchy  = 'horario__fecha'
+    raw_id_fields   = (
+        'paciente',
+        'servicio',
+        'producto',
+        'horario',
+        'estado',
+        'asignado_por',
+        'enfermero',  # ← nuevo campo aquí
+    )
+    #filter_horizontal = ('producto',)  # ← Esto activa un widget útil para seleccionar productos M2M
+    fieldsets = (
+    (None, {
+        'fields': (
+                'paciente',
+                'enfermero',
+                'servicio',
+                'producto',
+                'tipo_ubicacion',
+                'ubicacion',
+                'mapa_ubicacion',  # Añadido aquí también
+                'horario',
+                'hora',
+                'estado',
+                'asignado_por',
+                'notas',
+            )
+        }),
+        (_('Tiempos'), {
+            'fields': ('fecha_creacion', 'fecha_modifica'),
+        }),
+    )
+    readonly_fields = ('fecha_creacion', 'fecha_modifica')
+
+
+"appointments_forms.txt"
+from django import forms
+from .models import Appointment
+from CoreApps.catalog.models import Product
+from django.forms.widgets import SelectDateWidget
+from django.core.exceptions import ValidationError
+from .models import Schedule
+
+class AppointmentForm(forms.ModelForm):
+    class Meta:
+        model = Appointment
+        #fields = [
+        #    'paciente',
+        #    'servicio',
+        #    'producto',
+        #    'enfermero',
+        #    'fecha',
+        #    'hora',
+        #    'estado',
+        #    'notas',
+        #]
+        fields = [
+            'paciente', 'servicio', 'producto',
+            'tipo_ubicacion', 'ubicacion', 'mapa_ubicacion',  # Añade aquí
+            'enfermero', 'fecha', 'hora', 'estado', 'notas',
+        ]
+
+        widgets = {
+            #'paciente': forms.Select(attrs={'class': 'form-control'}),
+            'servicio': forms.Select(attrs={'class': 'form-control'}),
+            'producto': forms.Select(attrs={'class': 'form-control'}),
+            'tipo_ubicacion': forms.RadioSelect(),
+            'ubicacion': forms.Textarea(attrs={
+                'class': 'form-control', 'rows': 2,
+                'placeholder': 'Dirección de la cita'
+            }),
+            'mapa_ubicacion': forms.URLInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enlace al mapa de Google'
+            }),
+            'doctor_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Nombre del doctor'
+            }),
+            'diagnosis': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Diagnóstico médico'
+            }),
+            'enfermero': forms.Select(attrs={'class': 'form-control'}),
+            'horario': forms.Select(attrs={'class': 'form-control'}),
+            'fecha': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'hora': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control'}),
+            'estado': forms.Select(attrs={'class': 'form-control'}),
+            'notas': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        }
+    def clean(self):
+        cleaned_data = super().clean()
+        enfermero = cleaned_data.get('enfermero')
+        fecha = cleaned_data.get('fecha')
+        hora = cleaned_data.get('hora')
+        paciente  = cleaned_data.get('paciente')
+        tipo_ubi  = cleaned_data.get('tipo_ubicacion')
+        ubi       = cleaned_data.get('ubicacion')
+
+        if enfermero and fecha and hora:
+            try:
+                horario = Schedule.objects.get(
+                    enfermero=enfermero,
+                    fecha=fecha,
+                    hora_inicio__lte=hora,
+                    hora_fin__gte=hora,
+                    disponible=True
+                )
+                self.instance.horario = horario  # ← AQUÍ ASIGNAMOS ANTES DE VALIDAR EL MODELO
+            except Schedule.DoesNotExist:
+                raise forms.ValidationError("No se encontró un horario disponible para esta fecha y hora seleccionada.")
+
+        if tipo_ubi == 'domicilio':
+            if paciente and paciente.direccion and paciente.ubicacion_mapa:
+                cleaned_data['ubicacion'] = paciente.direccion
+                cleaned_data['mapa_ubicacion'] = paciente.ubicacion_mapa
+                self.instance.ubicacion = paciente.direccion
+                self.instance.mapa_ubicacion = paciente.ubicacion_mapa
+            else:
+                raise ValidationError("El cliente no tiene dirección o mapa registrados.")
+        else:  # 'otro'
+            if not ubi or not cleaned_data.get('mapa_ubicacion'):
+                raise ValidationError("Debe indicar la ubicación y el enlace del mapa para la cita.")
+            self.instance.ubicacion = ubi
+            self.instance.mapa_ubicacion = cleaned_data['mapa_ubicacion']
+
+        return cleaned_data
+
+        
+
+    #def clean(self):
+    #    cleaned = super().clean()
+    #    enfermero = cleaned.get('enfermero')
+    #    fecha = cleaned.get('fecha')
+    #    hora = cleaned.get('hora')
+#
+    #    if enfermero and fecha and hora:
+    #        conflicto = Appointment.objects.filter(
+    #            enfermero=enfermero,
+    #            fecha=fecha,
+    #            hora=hora
+    #        )
+    #        if self.instance.pk:
+    #            conflicto = conflicto.exclude(pk=self.instance.pk)
+#
+    #        if conflicto.exists():
+    #            raise ValidationError(
+    #                f"Ya existe una cita asignada al enfermero {enfermero} el {fecha} a las {hora}.",
+    #                code='duplicate_appointment'
+    #            )
+#
+    #    return cleaned
+
+class ScheduleForm(forms.ModelForm):
+    class Meta:
+        model = Schedule
+        fields = ['fecha', 'hora_inicio', 'hora_fin']
+        widgets = {
+            'fecha': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'hora_inicio': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control'}),
+            'hora_fin': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control'}),
+        }
+
+"appointments_models.txt"
+# CoreApps/appointments/models.py
+
+from django.conf import settings
+from django.db import models
+from django.utils.translation import gettext_lazy as _
+from CoreApps.customers.models import CustomerProfile
+from CoreApps.catalog.models import Service
+from django.core.exceptions import ValidationError  # ← Añade esta línea
+from CoreApps.catalog.models import Service, Product  # Asegúrate de importar Product también
+
+class AppointmentStatus(models.Model):
+    nombre       = models.CharField(_("Estado"), max_length=50, unique=True)
+    descripcion  = models.TextField(_("Descripción"), blank=True)
+
+    class Meta:
+        verbose_name        = _("Estado de Cita")
+        verbose_name_plural = _("Estados de Citas")
+
+    def __str__(self):
+        return self.nombre
+
+
+
+class Schedule(models.Model):
+    enfermero     = models.ForeignKey(
+                        settings.AUTH_USER_MODEL,
+                        limit_choices_to={'rol': 'enfermero'},
+                        on_delete=models.CASCADE,
+                        related_name='horarios'
+                    )
+    fecha         = models.DateField(_("Fecha"))
+    hora_inicio   = models.TimeField(_("Hora de inicio"))
+    hora_fin      = models.TimeField(_("Hora de fin"))
+    disponible    = models.BooleanField(_("Disponible"), default=True)
+
+    class Meta:
+        verbose_name        = _("Horario")
+        verbose_name_plural = _("Horarios")
+        unique_together     = ('enfermero', 'fecha', 'hora_inicio', 'hora_fin')
+
+    def __str__(self):
+        return f"{self.enfermero.nombres} — {self.fecha} {self.hora_inicio}-{self.hora_fin}"
+
+
+
+class Appointment(models.Model):
+    paciente        = models.ForeignKey(
+                         CustomerProfile,
+                         on_delete=models.CASCADE,
+                         related_name='citas'
+                       )
+    servicio        = models.ForeignKey(
+                         Service,
+                         on_delete=models.PROTECT,
+                         related_name='citas'
+                       )
+    enfermero       = models.ForeignKey(
+                        settings.AUTH_USER_MODEL,
+                        on_delete=models.PROTECT,
+                        related_name='citas_asignadas',
+                        limit_choices_to={'rol': 'enfermero'},
+                        verbose_name=_("Enfermero asignado"),
+                        blank=True, null=True
+                       )
+    horario         = models.ForeignKey(
+                         Schedule,
+                         on_delete=models.PROTECT,
+                         related_name='citas'
+                       )
+    fecha           = models.DateField(_("Fecha de la cita"), null=True, blank=True)
+    hora            = models.TimeField(_("Hora de la cita"), null=True, blank=True)   
+    # Ubicación de la cita
+    TIPO_UBICACION = [
+        ('domicilio', 'En domicilio'),
+        ('otro',      'Otra ubicación'),
+    ]
+    tipo_ubicacion = models.CharField(
+        _("Tipo de ubicación"),
+        max_length=10,
+        choices=TIPO_UBICACION,
+        default='domicilio'
+    )
+    ubicacion = models.TextField(
+        _("Ubicación de la cita"),
+        blank=True,
+        help_text="Si es en domicilio, se copiará la dirección del cliente."
+    )
+    mapa_ubicacion = models.URLField(
+        _("Ubicación en Google Maps"),
+        max_length=500,
+        blank=True,
+        null=True,
+        help_text=_("Enlace a Google Maps para la cita.")
+    )
+    # —————————————————————————————————————————
+    estado          = models.ForeignKey(
+                         AppointmentStatus,
+                         on_delete=models.PROTECT,
+                         related_name='citas'
+                       )
+    asignado_por    = models.ForeignKey(
+                         settings.AUTH_USER_MODEL,
+                         on_delete=models.SET_NULL,
+                         null=True,
+                         related_name='citas_agendadas'
+                       )
+    #productos       = models.ManyToManyField(Product, blank=True, related_name='citas')  # ← NUEVO
+    producto        = models.ForeignKey(Product, on_delete=models.PROTECT, verbose_name=_("Producto aplicado"), null=True, blank=True)  # ← NUEVO (null=True, blank=True)
+    doctor_name     = models.CharField(_("Doctor"), max_length=200, blank=True)
+    diagnosis       = models.TextField(_("Diagnóstico"), blank=True)
+    notas           = models.TextField(_("Notas adicionales"), blank=True)
+    fecha_creacion  = models.DateTimeField(_("Creado en"), auto_now_add=True)
+    fecha_modifica  = models.DateTimeField(_("Última modificación"), auto_now=True)
+
+    class Meta:
+        verbose_name        = _("Cita")
+        verbose_name_plural = _("Citas")
+        ordering            = ['horario__fecha', 'horario__hora_inicio']
+
+    def __str__(self):
+        return f"Cita {self.paciente.nombres} — {self.horario.fecha} {self.hora}"
+    
+    def clean(self):
+        #if self.hora < self.horario.hora_inicio or self.hora > self.horario.hora_fin:
+        #    raise ValidationError({
+        #        'hora': _(
+        #            f"La hora de la cita debe estar entre "
+        #            f"{self.horario.hora_inicio} y {self.horario.hora_fin}."
+        #        )
+        #    })
+    
+        if self.horario and self.enfermero and self.horario.enfermero != self.enfermero:
+            raise ValidationError({
+                'horario': _("Este horario no pertenece al enfermero seleccionado.")
+            })
+
+        if self.enfermero and self.fecha and self.hora:
+            from datetime import timedelta, datetime
+        
+            hora_inicio_cita = datetime.combine(self.fecha, self.hora)
+            hora_fin_cita = hora_inicio_cita + timedelta(hours=1)  # ← asumimos duración de 1 hora
+        
+            conflictos = Appointment.objects.filter(
+                enfermero=self.enfermero,
+                fecha=self.fecha
+            ).exclude(pk=self.pk)
+        
+            for cita in conflictos:
+                inicio_existente = datetime.combine(cita.fecha, cita.hora)
+                fin_existente = inicio_existente + timedelta(hours=1)
+        
+                # Verifica si se solapan
+                if inicio_existente < hora_fin_cita and hora_inicio_cita < fin_existente:
+                    raise ValidationError({
+                        'hora': _(
+                            f"Ya existe una cita para este enfermero entre "
+                            f"{inicio_existente.time().strftime('%H:%M')} y {fin_existente.time().strftime('%H:%M')}."
+                        )
+                    })
+
+
+        #if self.enfermero and self.fecha and self.hora:
+        #    ya_existe = Appointment.objects.filter(
+        #        enfermero=self.enfermero,
+        #        fecha=self.fecha,
+        #        hora=self.hora
+        #    )
+        #    # Si está editando, excluye el mismo objeto
+        #    if self.pk:
+        #        ya_existe = ya_existe.exclude(pk=self.pk)
+    #
+        #    if ya_existe.exists():
+        #        raise ValidationError({
+        #            'hora': _("Ya existe una cita para este enfermero en esta fecha y hora.")
+        #        })
+
+
+"appointments_urls.txt"
+from django.urls import path
+from . import views
+
+app_name = 'appointments'
+
+urlpatterns = [
+    path('', views.AppointmentListView.as_view(), name='appointment-list'),
+    path('nuevo/', views.AppointmentCreateView.as_view(), name='appointment-create'),
+    path('<int:pk>/detalle/', views.AppointmentDetailView.as_view(), name='appointment-detail'),
+    path('<int:pk>/editar/', views.AppointmentUpdateView.as_view(), name='appointment-update'),
+    path('<int:pk>/eliminar/', views.AppointmentDeleteView.as_view(), name='appointment-delete'),
+    path('horarios/nuevo/', views.ScheduleCreateView.as_view(), name='nuevo-horario'),
+    path('horarios/mis-horarios/', views.ScheduleListView.as_view(), name='mis-horarios'),
+    path('horarios/editar/<int:pk>/', views.ScheduleUpdateView.as_view(), name='editar-horario'),
+    path('horarios/eliminar/<int:pk>/', views.ScheduleDeleteView.as_view(), name='eliminar-horario'),
+    path('api/pacientes/', views.obtener_pacientes_por_ciudad, name='api-obtener-pacientes'),
+    path('api/horarios/', views.obtener_horarios_por_enfermero, name='api-obtener-horarios'),
+    path('api/enfermeros/', views.obtener_enfermeros_por_ciudad, name='api-enfermeros'),
+
+    path('mis-citas/', views.AssignedAppointmentListView.as_view(), name='mis-citas'),
+    path('mis-citas/<int:pk>/', views.AssignedAppointmentDetailView.as_view(), name='mis-citas-detail'),
+
+
+]
+
+
+
+"appointments_views.txt"
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views.generic import ListView, CreateView, UpdateView, DetailView, DeleteView
+from django.contrib.auth.mixins import UserPassesTestMixin
+from django.urls import reverse_lazy
+from .models import Appointment
+from .forms import AppointmentForm
+from .forms import ScheduleForm
+from django.http import JsonResponse
+from CoreApps.customers.models import CustomerProfile
+from CoreApps.core.models import City
+from CoreApps.appointments.models import Schedule
+from CoreApps.appointments.models import Appointment
+from django.utils import timezone
+from datetime import datetime, timedelta
+from django.contrib.auth import get_user_model
+
+
+User = get_user_model()
+
+# Listar todas las citas (operador y administrador)
+class AppointmentListView(LoginRequiredMixin, ListView):
+    model = Appointment
+    template_name = 'main/appointments/appointment_list.html'
+    context_object_name = 'appointments'
+
+    def get_queryset(self):
+        return Appointment.objects.select_related(
+            'paciente', 'servicio', 'horario', 'estado'
+        ).prefetch_related('producto').order_by('-fecha_creacion')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = "Citas"
+        context['subtitle'] = "Listado de citas agendadas"
+        return context
+
+# Crear nueva cita
+class AppointmentCreateView(LoginRequiredMixin, CreateView):
+    model = Appointment
+    form_class = AppointmentForm
+    template_name = 'main/appointments/appointment_form1.html'
+    success_url = reverse_lazy('appointments:appointment-list')
+
+    def form_valid(self, form):
+        form.instance.asignado_por = self.request.user
+        form.instance.paciente_id = self.request.POST.get('paciente')
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = "Nueva Cita"
+        context['subtitle'] = "Agendar cita para paciente"
+        context['ciudades'] = City.objects.all()
+        return context
+
+# Detalle de una cita
+class AppointmentDetailView(LoginRequiredMixin, DetailView):
+    model = Appointment
+    template_name = 'main/appointments/appointment_detail.html'
+    context_object_name = 'appointment'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = "Detalle de Cita"
+        context['subtitle'] = "Información completa"
+        return context
+
+# Editar cita
+class AppointmentUpdateView(LoginRequiredMixin, UpdateView):
+    model = Appointment
+    form_class = AppointmentForm
+    template_name = 'main/appointments/appointment_form1.html'
+    success_url = reverse_lazy('appointments:appointment-list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = "Editar Cita"
+        context['subtitle'] = "Modificar datos"
+        context['ciudades'] = City.objects.all()
+        # Datos iniciales solo si existe objeto (modo edición)
+        context['ciudad_inicial'] = self.object.paciente.ciudad_id if self.object.paciente else None
+        context['paciente_inicial'] = self.object.paciente_id
+        context['enfermero_inicial'] = self.object.enfermero_id
+        context['horario_inicial'] = self.object.horario_id
+        context['hora_inicial'] = self.object.hora.strftime("%H:%M") if self.object.hora else ''
+        context['zona_inicial'] = (
+            self.object.paciente.zona_id
+            if self.object.paciente and self.object.paciente.zona_id
+            else None
+        )
+        context['mapa_inicial'] = self.object.mapa_ubicacion if self.object.mapa_ubicacion else ''
+
+        return context
+
+# Eliminar cita
+class AppointmentDeleteView(LoginRequiredMixin, DeleteView):
+    model = Appointment
+    template_name = 'main/appointments/appointment_confirm_delete.html'
+    success_url = reverse_lazy('appointments:appointment-list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = "Eliminar Cita"
+        context['subtitle'] = "Confirmación de eliminación"
+        return context
+
+class ScheduleCreateView(LoginRequiredMixin, CreateView):
+    model = Schedule
+    form_class = ScheduleForm
+    template_name = 'main/appointments/schedule_form.html'
+    success_url = reverse_lazy('appointments:mis-horarios')
+
+    def form_valid(self, form):
+        form.instance.enfermero = self.request.user
+        return super().form_valid(form)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = "Establecer Horarios"
+        context['subtitle'] = "Agendar horarios"
+        return context
+
+class ScheduleListView(LoginRequiredMixin, ListView):
+    model = Schedule
+    template_name = 'main/appointments/schedule_list.html'
+    context_object_name = 'horarios'
+
+    def get_queryset(self):
+        # Base: sólo los horarios del usuario
+        qs = Schedule.objects.filter(enfermero=self.request.user)
+        # Leemos ?date=YYYY-MM-DD
+        date_str = self.request.GET.get('date')
+        if date_str:
+            try:
+                selected = datetime.strptime(date_str, '%Y-%m-%d').date()
+            except ValueError:
+                selected = timezone.localdate()
+        else:
+            selected = timezone.localdate()
+        # Guardamos en la instancia para usar en el contexto
+        self.selected_date = selected
+        # Filtramos por esa fecha y ordenamos por hora
+        return qs.filter(fecha=selected).order_by('hora_inicio')
+    #def get_queryset(self):
+    #    return Schedule.objects.filter(enfermero=self.request.user).order_by('-fecha', 'hora_inicio')
+    
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx.update({
+            'title': "Lista de Horarios",
+            'subtitle': f"Horarios para {self.selected_date.strftime('%d/%m/%Y')}",
+            'selected_date': self.selected_date.isoformat(),
+        })
+        return ctx
+    #def get_context_data(self, **kwargs):
+    #    context = super().get_context_data(**kwargs)
+    #    context['title'] = "Lista de Horarios"
+    #    context['subtitle'] = "horarios"
+    #    return context
+
+class ScheduleUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+    model = Schedule
+    form_class = ScheduleForm
+    template_name = 'main/appointments/schedule_form.html'
+    success_url = reverse_lazy('appointments:mis-horarios')
+
+    def test_func(self):
+        return self.get_object().enfermero == self.request.user
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = "Editar Horario"
+        context['subtitle'] = "Editar"
+        return context
+
+class ScheduleDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+    model = Schedule
+    template_name = 'main/appointments/schedule_confirm_delete.html'
+    success_url = reverse_lazy('appointments:mis-horarios')
+
+    def test_func(self):
+        return self.get_object().enfermero == self.request.user
+
+
+
+def obtener_pacientes_por_ciudad(request):
+    
+    ciudad_id = request.GET.get('ciudad_id')
+    zona_id   = request.GET.get('zona_id')
+    if not ciudad_id:
+        return JsonResponse([], safe=False)
+
+    # Base QS filtrada por ciudad, y si llega zona_id, filtramos por zona
+    qs = CustomerProfile.objects.filter(ciudad_id=ciudad_id)
+    #qs = CustomerProfile.objects.filter(ciudad_id=ciudad_id)
+    if zona_id:
+        qs = qs.filter(zona_id=zona_id)
+    #pacientes = qs.values('id', 'nombres', 'apellidos', 'cedula')
+    pacientes = qs.values('id', 'nombres', 'apellidos', 'cedula', 'direccion', 'ubicacion_mapa')
+    data = [
+        {
+            'id': p['id'],
+            #'nombre': f"{p['nombres']} {p['apellidos']} ({p['cedula']})"
+            'nombre': f"{p['nombres']} {p['apellidos']} ({p['cedula']})",
+            'direccion': p['direccion'],
+            'mapa': p['ubicacion_mapa']  # Añade esta línea
+        }
+        for p in pacientes
+    ]
+    return JsonResponse(data, safe=False)
+
+def obtener_horarios_por_enfermero(request):
+    enfermero_id = request.GET.get('enfermero_id')
+    if not enfermero_id:
+        return JsonResponse([], safe=False)
+
+    horarios = Schedule.objects.filter(enfermero_id=enfermero_id, disponible=True).order_by('fecha', 'hora_inicio')
+    data = []
+
+    for h in horarios:
+        # Obtener horas ocupadas en citas para este horario
+        citas = Appointment.objects.filter(enfermero_id=enfermero_id, horario_id=h.id)
+        horas_ocupadas = [c.hora.strftime("%H:%M") for c in citas]
+
+        data.append({
+            'id': h.id,
+            'texto': f"{h.fecha} - {h.hora_inicio} a {h.hora_fin}",
+            'fecha': h.fecha.strftime("%Y-%m-%d"),
+            'hora_inicio': h.hora_inicio.strftime("%H:%M"),
+            'hora_fin': h.hora_fin.strftime("%H:%M"),
+            'ocupadas': horas_ocupadas  # NUEVO CAMPO
+        })
+
+    return JsonResponse(data, safe=False)
+#def obtener_horarios_por_enfermero(request):
+#    enfermero_id = request.GET.get('enfermero_id')
+#    if not enfermero_id:
+#        return JsonResponse([], safe=False)
+#
+#    horarios = Schedule.objects.filter(enfermero_id=enfermero_id, disponible=True).order_by('fecha', 'hora_inicio')
+#    data = [
+#        {
+#            'id': h.id,
+#            'texto': f"{h.fecha} - {h.hora_inicio} a {h.hora_fin}",
+#            'fecha': h.fecha.strftime("%Y-%m-%d"),  # lo importante
+#            'hora_inicio': h.hora_inicio.strftime("%H:%M"),
+#            'hora_fin': h.hora_fin.strftime("%H:%M"),
+#        }
+#        for h in horarios
+#    ]
+#    return JsonResponse(data, safe=False)
+
+def obtener_enfermeros_por_ciudad(request):
+    ciudad_id = request.GET.get('ciudad_id')
+    zona_id   = request.GET.get('zona_id')
+    if not ciudad_id:
+        return JsonResponse([], safe=False)
+
+    # Filtramos por ciudad y, si existe zona_id, por esa zona (M2M)
+    qs = User.objects.filter(rol='enfermero', ciudad_id=ciudad_id)
+    if zona_id:
+        qs = qs.filter(zonas__id=zona_id)
+    enfermeros = qs.values('id', 'nombres', 'email')
+    data = [
+        {
+            'id': e['id'],
+            'nombre': f"{e['nombres']} ({e['email']})"
+        }
+        for e in enfermeros
+    ]
+    return JsonResponse(data, safe=False)
+
+
+
+
+#citas de enfermeros logeados para realizar la visualizacion y gestion de las mismas
+class AssignedAppointmentListView(LoginRequiredMixin, ListView):
+    model = Appointment
+    template_name = 'main/appointments/enfermero_appointment_list.html'
+    context_object_name = 'appointments'
+
+    def get_queryset(self):
+        qs = Appointment.objects.filter(enfermero=self.request.user)
+        date_str = self.request.GET.get('date')
+        if date_str:
+            try:
+                selected = datetime.strptime(date_str, '%Y-%m-%d').date()
+            except ValueError:
+                selected = timezone.localdate()
+        else:
+            selected = timezone.localdate()
+        self.selected_date = selected
+        return qs.filter(horario__fecha=selected).order_by('horario__fecha', 'hora')
+        
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['selected_date'] = self.selected_date.isoformat()
+        ctx['title']    = "Mis Citas Asignadas"
+        ctx['subtitle'] = f"Citas para {self.selected_date.strftime('%d/%m/%Y')}"
+        return ctx
+    
+    #def get_queryset(self):
+    #    return Appointment.objects.filter(
+    #        enfermero=self.request.user
+    #    ).order_by('horario__fecha', 'hora')
+
+class AssignedAppointmentDetailView(LoginRequiredMixin, DetailView):
+    model = Appointment
+    template_name = 'main/appointments/enfermero_appointment_detail.html'
+    context_object_name = 'appointment'
+
+
+"appointments_widgets.txt"
+from django.urls import reverse
+from django_select2.forms import ModelSelect2Widget
+from CoreApps.customers.models import CustomerProfile
+
+class CustomerByCityWidget(ModelSelect2Widget):
+    model = CustomerProfile
+    search_fields = ['nombres__icontains', 'apellidos__icontains']
+    dependent_fields = {'ciudad': 'ciudad'}
+
+    def label_from_instance(self, obj):
+        return f"{obj.nombres} {obj.apellidos} ({obj.cedula})"
+
+    def get_url(self):
+        return reverse('appointments:paciente-autocomplete')
+
+
+"catalog_admin.txt"
+from django.contrib import admin
+from .models import Service, Product
+
+@admin.register(Service)
+class ServiceAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'precio', 'activo')
+    list_filter = ('activo',)
+    search_fields = ('nombre',)
+
+@admin.register(Product)
+class ProductAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'precio', 'cantidad_disponible', 'activo')
+    list_filter = ('activo',)
+    search_fields = ('nombre',)
+
+
+"catalog_forms.txt"
+from django import forms
+from .models import Service, Product
+
+class ServiceForm(forms.ModelForm):
+    class Meta:
+        model = Service
+        fields = ['nombre', 'descripcion', 'precio', 'activo']
+        widgets = {
+            'nombre': forms.TextInput(attrs={'class': 'form-control'}),
+            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows':3}),
+            'precio': forms.NumberInput(attrs={'class': 'form-control'}),
+            'activo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+class ProductForm(forms.ModelForm):
+    class Meta:
+        model = Product
+        fields = ['nombre', 'descripcion', 'precio', 'cantidad_disponible', 'activo']
+        widgets = {
+            'nombre': forms.TextInput(attrs={'class': 'form-control'}),
+            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows':3}),
+            'precio': forms.NumberInput(attrs={'class': 'form-control'}),
+            'cantidad_disponible': forms.NumberInput(attrs={'class': 'form-control'}),
+            'activo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+
+"catalog_models.txt"
+#CoreApps/catalog/models.py
+from django.db import models
+from django.utils.translation import gettext_lazy as _
+
+class Service(models.Model):
+    #neptuno agregar
+    nombre = models.CharField(_("Nombre del servicio"), max_length=100)
+    descripcion = models.TextField(_("Descripción del servicio"), blank=True)
+    precio = models.DecimalField(_("Precio"), max_digits=8, decimal_places=2)
+    activo = models.BooleanField(_("Activo"), default=True)
+
+    class Meta:
+        verbose_name = _("Servicio")
+        verbose_name_plural = _("Servicios")
+
+    def __str__(self):
+        return self.nombre
+
+class Product(models.Model):
+    #neptuno agregar campo
+    nombre = models.CharField(_("Nombre del producto"), max_length=100)
+    descripcion = models.TextField(_("Descripción del producto"), blank=True)
+    precio = models.DecimalField(_("Precio"), max_digits=8, decimal_places=2)
+    cantidad_disponible = models.PositiveIntegerField(_("Cantidad disponible"), default=0)
+    activo = models.BooleanField(_("Activo"), default=True)
+
+    class Meta:
+        verbose_name = _("Producto")
+        verbose_name_plural = _("Productos")
+
+    def __str__(self):
+        return self.nombre
+
+
+"catalog_urls.txt"
+from django.urls import path
+from . import views
+
+app_name = 'catalog'
+
+urlpatterns = [
+    # Servicios
+    path('servicios/', views.ServiceListView.as_view(), name='service-list'),
+    path('servicios/nuevo/', views.ServiceCreateView.as_view(), name='service-create'),
+    path('servicios/<int:pk>/editar/', views.ServiceUpdateView.as_view(), name='service-update'),
+    path('servicios/<int:pk>/eliminar/', views.ServiceDeleteView.as_view(), name='service-delete'),
+
+    # Productos
+    path('productos/', views.ProductListView.as_view(), name='product-list'),
+    path('productos/nuevo/', views.ProductCreateView.as_view(), name='product-create'),
+    path('productos/<int:pk>/editar/', views.ProductUpdateView.as_view(), name='product-update'),
+    path('productos/<int:pk>/eliminar/', views.ProductDeleteView.as_view(), name='product-delete'),
+]
+
+
+"catalog_views.txt"
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView
+from django.urls import reverse_lazy
+from .models import Service, Product
+from .forms import ServiceForm, ProductForm
+
+# CRUD Services
+class ServiceListView(LoginRequiredMixin, ListView):
+    model = Service
+    template_name = 'main/catalog/service_list.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        # Otros datos de contexto (título, subtítulo, etc.)
+        context['title'] = "Servicios"
+        context['subtitle'] = "Lista de servicios"
+        context['user'] = user
+        return context
+
+class ServiceCreateView(LoginRequiredMixin, CreateView):
+    model = Service
+    form_class = ServiceForm
+    template_name = 'main/catalog/service_form.html'
+    success_url = reverse_lazy('catalog:service-list')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        # Otros datos de contexto (título, subtítulo, etc.)
+        context['title'] = "Nuevo Servicio"
+        context['subtitle'] = "Nuevo"
+        context['user'] = user
+        return context
+
+class ServiceUpdateView(LoginRequiredMixin, UpdateView):
+    model = Service
+    form_class = ServiceForm
+    template_name = 'main/catalog/service_form.html'
+    success_url = reverse_lazy('catalog:service-list')
+
+class ServiceDeleteView(LoginRequiredMixin, DeleteView):
+    model = Service
+    template_name = 'main/catalog/service_confirm_delete.html'
+    success_url = reverse_lazy('catalog:service-list')
+
+# CRUD Products
+class ProductListView(LoginRequiredMixin, ListView):
+    model = Product
+    template_name = 'main/catalog/product_list.html'
+
+    def get_context_data(self, **kwargs):
+       context = super().get_context_data(**kwargs)
+       user = self.request.user
+       # Otros datos de contexto (título, subtítulo, etc.)
+       context['title'] = "Productos"
+       context['subtitle'] = "Lista de Productos"
+       context['user'] = user
+       return context
+
+class ProductCreateView(LoginRequiredMixin, CreateView):
+    model = Product
+    form_class = ProductForm
+    template_name = 'main/catalog/product_form.html'
+    success_url = reverse_lazy('catalog:product-list')
+
+    def get_context_data(self, **kwargs):
+       context = super().get_context_data(**kwargs)
+       user = self.request.user
+       # Otros datos de contexto (título, subtítulo, etc.)
+       context['title'] = "Nuevo Producto"
+       context['subtitle'] = "Nuevo"
+       context['user'] = user
+       return context
+
+class ProductUpdateView(LoginRequiredMixin, UpdateView):
+    model = Product
+    form_class = ProductForm
+    template_name = 'main/catalog/product_form.html'
+    success_url = reverse_lazy('catalog:product-list')
+
+class ProductDeleteView(LoginRequiredMixin, DeleteView):
+    model = Product
+    template_name = 'main/catalog/product_confirm_delete.html'
+    success_url = reverse_lazy('catalog:product-list')
+
+
+"core_admin.txt"
+from django.contrib import admin
+from .models import City, Zona
+
+@admin.register(City)
+class CityAdmin(admin.ModelAdmin):
+    list_display = ('nombre',)
+    search_fields = ('nombre',)
+
+@admin.register(Zona)               # ← Registra Zona
+class ZonaAdmin(admin.ModelAdmin):
+    list_display   = ('nombre', 'ciudad')
+    list_filter    = ('ciudad',)
+    search_fields  = ('nombre',)
+
+"core_models.txt"
+#CoreApps/core/models.py
+from django.db import models
+from django.utils.translation import gettext_lazy as _
+
+class City(models.Model):
+    nombre = models.CharField(_("Ciudad"), max_length=100, unique=True)
+
+    class Meta:
+        verbose_name = _("Ciudad")
+        verbose_name_plural = _("Ciudades")
+        ordering = ['nombre']
+
+    def __str__(self):
+        return self.nombre
+
+class Zona(models.Model):
+    ciudad = models.ForeignKey(
+        City,
+        on_delete=models.CASCADE,
+        related_name='zonas'
+    )
+    nombre = models.CharField(_("Zona"), max_length=100)
+
+    class Meta:
+        verbose_name = _("Zona")
+        verbose_name_plural = _("Zonas")
+        unique_together = ('ciudad', 'nombre')
+        ordering = ['ciudad__nombre', 'nombre']
+
+    def __str__(self):
+        return f"{self.nombre} ({self.ciudad.nombre})"
+
+"core_views.txt"
+from django.shortcuts import render
+
+# Create your views here.
+
+
+"customers_admin.txt"
+from django.contrib import admin
+from .models import CustomerProfile, MedicalHistory
+
+@admin.register(CustomerProfile)
+class CustomerProfileAdmin(admin.ModelAdmin):
+    list_display = (
+        'cedula', 'nombres', 'apellidos',
+        'telefono', 'ciudad', 'zona',
+        'ubicacion_mapa',   # ← campo nuevo
+        'registrado_por', 'fecha_registro'
+    )
+    search_fields = (
+        'cedula', 'nombres', 'apellidos',
+        'telefono', 'email', 'ciudad__nombre',
+        'ubicacion_mapa'    # ← incluye en búsqueda
+    )
+    list_filter = ('ciudad', 'fecha_registro', 'registrado_por')
+
+@admin.register(MedicalHistory)
+class MedicalHistoryAdmin(admin.ModelAdmin):
+    list_display = ('customer', 'descripcion', 'fecha_registro')
+    search_fields = ('customer__cedula', 'customer__nombres')
+    list_filter = ('fecha_registro',)
+
+
+"customers_forms.txt"
+from django import forms
+from .models import CustomerProfile, MedicalHistory
+
+class CustomerProfileForm(forms.ModelForm):
+    class Meta:
+        model = CustomerProfile
+        #fields = ['nombres', 'apellidos', 'cedula', 'telefono', 'email', 'direccion', 'ciudad', 'fecha_nacimiento']
+        fields = [
+            'nombres','apellidos','cedula','telefono','email','ciudad','zona',
+            'direccion','ubicacion_mapa','fecha_nacimiento'
+        ]
+        widgets = {
+            'nombres': forms.TextInput(attrs={'class': 'form-control'}),
+            'apellidos': forms.TextInput(attrs={'class': 'form-control'}),
+            'cedula': forms.TextInput(attrs={'class': 'form-control'}),
+            'telefono': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'ciudad': forms.Select(attrs={'class':'form-control'}),
+            'zona':   forms.Select(attrs={'class':'form-control'}),
+            'direccion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'ubicacion_mapa': forms.URLInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'https://maps.google.com/…'
+            }),
+            #'ciudad': forms.Select(attrs={'class': 'form-control'}),  # Corrección aquí
+            'fecha_nacimiento': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+        }
+
+class MedicalHistoryForm(forms.ModelForm):
+    class Meta:
+        model = MedicalHistory
+        fields = ['descripcion']
+        widgets = {
+            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+        }
+
+
+"customers_models.txt"
+#CoreApps/curtomers/models.py
+from django.conf import settings
+from django.db import models
+from django.utils.translation import gettext_lazy as _
+from CoreApps.core.models import City, Zona
+
+class CustomerProfile(models.Model):
+    nombres = models.CharField(_("Nombres"), max_length=100)
+    apellidos = models.CharField(_("Apellidos"), max_length=100)
+    cedula = models.CharField(_("Cédula"), max_length=20, unique=True)
+    telefono = models.CharField(_("Teléfono"), max_length=20)
+    email = models.EmailField(_("Correo electrónico"), blank=True, null=True)
+    direccion = models.TextField(_("Dirección completa"))
+    ubicacion_mapa = models.URLField(
+        _("Ubicación en Google Maps"),
+        max_length=500,
+        blank=True,
+        null=True,
+        help_text=_("Enlace a Google Maps (https://maps.google.com/…) para esta dirección")
+    )
+    ciudad = models.ForeignKey(City, on_delete=models.PROTECT, related_name='clientes', blank=True, null=True) # <-- nuevo campo
+    zona = models.ForeignKey(Zona,on_delete=models.PROTECT, related_name='clientes', verbose_name=_("Zona"), blank=True, null=True)
+    fecha_nacimiento = models.DateField(_("Fecha de nacimiento"), blank=True, null=True)
+    fecha_registro = models.DateTimeField(_("Fecha de registro"), auto_now_add=True)
+    registrado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name=_("Registrado por"),
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="clientes_registrados"
+    )
+    class Meta:
+        verbose_name = _("Cliente")
+        verbose_name_plural = _("Clientes")
+
+    def __str__(self):
+        return f"{self.nombres} ({self.cedula})"
+
+
+class MedicalHistory(models.Model):
+    customer = models.ForeignKey(CustomerProfile, on_delete=models.CASCADE, related_name='medical_histories')
+    descripcion = models.TextField(_("Descripción médica"))
+    fecha_registro = models.DateTimeField(_("Fecha de registro"), auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("Historial Médico")
+        verbose_name_plural = _("Historiales Médicos")
+
+    def __str__(self):
+        return f"Historial de {self.customer.nombres} - {self.fecha_registro.strftime('%Y-%m-%d')}"
+
+
+"customers_urls.txt"
+from django.urls import path
+from . import views
+
+app_name = 'customers'
+
+urlpatterns = [
+    path('', views.CustomerListView.as_view(), name='customer-list'),
+    path('nuevo/', views.CustomerCreateView.as_view(), name='customer-create'),
+    path('detalle/<int:pk>/', views.CustomerDetailView.as_view(), name='customer-detail'),
+    path('editar/<int:pk>/', views.CustomerUpdateView.as_view(), name='customer-update'),
+    path('eliminar/<int:pk>/', views.CustormerDeleteView.as_view(), name='customer-delete'),
+    path('api/zonas/', views.obtener_zonas_por_ciudad, name='api-obtener-zonas'),
+]
+
+
+"customers_views.txt"
+from django.shortcuts import render
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views.generic import ListView, CreateView, DetailView, UpdateView, DeleteView
+from django.urls import reverse_lazy
+from .models import CustomerProfile
+from .forms import CustomerProfileForm
+from CoreApps.core.models import Zona
+from django.http import JsonResponse
+
+class CustomerListView(LoginRequiredMixin, ListView):
+    model = CustomerProfile
+    #template_name = 'main/customers/customer_list.html'
+    template_name = 'main/customers/customer_list.html'
+    context_object_name = 'customers'
+
+    def get_queryset(self):
+        return CustomerProfile.objects.select_related('ciudad', 'zona').all()
+
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        # Otros datos de contexto (título, subtítulo, etc.)
+        context['title'] = "Clientes"
+        context['subtitle'] = "Lista de clientes"
+        context['user'] = user
+        return context
+
+class CustomerCreateView(LoginRequiredMixin, CreateView):
+    model = CustomerProfile
+    form_class = CustomerProfileForm
+    template_name = 'main/customers/customer_form.html'
+    success_url = reverse_lazy('customers:customer-list')
+
+    def form_valid(self, form):
+        form.instance.registrado_por = self.request.user
+        return super().form_valid(form)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        # Otros datos de contexto (título, subtítulo, etc.)
+        context['title'] = "Nuevo Cliente"
+        context['subtitle'] = "Nuevo"
+        context['zona_inicial'] = None
+        context['user'] = user
+        return context
+
+class CustomerDetailView(LoginRequiredMixin, DetailView):
+    model = CustomerProfile
+    template_name = 'main/customers/customer_detail.html'
+    context_object_name = 'customer'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        # Otros datos de contexto (título, subtítulo, etc.)
+        context['title'] = "Nuevo Cliente"
+        context['subtitle'] = "Nuevo"
+        context['user'] = user
+        return context
+
+class CustomerUpdateView(LoginRequiredMixin, UpdateView):
+    model = CustomerProfile
+    form_class = CustomerProfileForm
+    template_name = 'main/customers/customer_form.html'
+    success_url = reverse_lazy('customers:customer-list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        # Otros datos de contexto (título, subtítulo, etc.)
+        context['title'] = "Editar Cliente"
+        context['subtitle'] = "Editar"
+        context['zona_inicial'] = self.object.zona_id
+        context['user'] = user
+        return context
+
+class CustormerDeleteView(LoginRequiredMixin, DeleteView):
+    model = CustomerProfile
+    template_name = 'main/customers/customer_confirm_delete.html'
+    success_url = reverse_lazy('customers:customer-list')
+
+def obtener_zonas_por_ciudad(request):
+    """
+    Endpoint que recibe GET?ciudad_id=… y devuelve
+    [{'id': zona_id, 'nombre': zona_nombre}, …]
+    """
+    ciudad_id = request.GET.get('ciudad_id')
+    if not ciudad_id:
+        return JsonResponse([], safe=False)
+
+    qs = Zona.objects.filter(ciudad_id=ciudad_id).values('id', 'nombre')
+    data = [{'id': z['id'], 'nombre': z['nombre']} for z in qs]
+    return JsonResponse(data, safe=False)
+
+
+"main_admin.txt"
+from django.contrib import admin
+
+# Register your models here.
+
+
+"main_models.txt"
+from django.db import models
+
+# Create your models here.
+
+
+"main_urls.txt"
+from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+from django.conf.urls.static import static
+from django.conf import settings
+from django.contrib import admin
+from django.urls import path, include
+from django.contrib.auth.views import LogoutView
+from .views import (
+    CustomLoginView, SignUpView, DashboardView,
+)
+
+# Elimina esta línea redundante
+# from django.urls import path
+# from . import view
+
+urlpatterns = [
+    path('', CustomLoginView.as_view(), name='login'),
+    path('signup/', SignUpView.as_view(), name='signup'),
+    path('logout/', LogoutView.as_view(next_page='login'), name='logout'),
+    path('dashboard/', DashboardView.as_view(), name='dashboard'),
+    
+    
+    
+]
+
+"main_views.txt"
+from django.shortcuts import render
+from django.contrib.auth.views import LoginView, LogoutView
+from django.views.generic.edit import CreateView, UpdateView, DeleteView
+from django.views.generic.list import ListView
+from django.urls import reverse_lazy
+from CoreApps.users.forms import CustomUserCreationForm
+from django.contrib.auth import login
+from CoreApps.users.models import User
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views.generic import TemplateView
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from CoreApps.users.models import User
+from CoreApps.customers.models import CustomerProfile
+# Añadir esta importación para JsonResponse
+from django.http import JsonResponse
+from django.conf import settings
+from datetime import datetime
+
+class CustomLoginView(LoginView):
+    template_name = 'main/login.html'
+    def get_success_url(self):
+        return reverse_lazy('dashboard')
+
+    def form_invalid(self, form):
+        messages.error(self.request, 'Por favor verifica tus credenciales e intenta nuevamente.')
+        return super().form_invalid(form)
+
+class SignUpView(CreateView):
+    form_class = CustomUserCreationForm
+    template_name = 'main/signup.html'
+    success_url = reverse_lazy('login')
+
+    def form_valid(self, form):
+        form.instance.user_type = User.UserType.CLIENT
+        response = super().form_valid(form)
+        login(self.request, self.object)
+        return response
+
+class DashboardView(LoginRequiredMixin, TemplateView):
+    template_name = 'main/dashboard/main_dashboard.html'
+    login_url = 'login'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        # Otros datos de contexto (título, subtítulo, etc.)
+        context['title'] = "Dashboard"
+        context['subtitle'] = "Dashboard"
+        context['user'] = user
+        return context
+
+
+
+"reports_admin.txt"
+from django.contrib import admin
+from .models import Report, ConsentOrPrescription
+
+@admin.register(Report)
+class ReportAdmin(admin.ModelAdmin):
+    list_display = ('appointment', 'enfermero', 'fecha_hora_reporte', 'valoracion')
+    search_fields = ('appointment__paciente__nombres', 'appointment__servicio__nombre', 'enfermero__nombres')
+    list_filter = ('valoracion', 'fecha_hora_reporte')
+    date_hierarchy = 'fecha_hora_reporte'
+    raw_id_fields = ('appointment', 'enfermero')
+
+@admin.register(ConsentOrPrescription)
+class ConsentOrPrescriptionAdmin(admin.ModelAdmin):
+    list_display = ('report', 'tipo', 'fecha_hora_creacion')
+    search_fields = ('report__appointment__paciente__nombres', 'tipo')
+    list_filter = ('tipo', 'fecha_hora_creacion')
+    date_hierarchy = 'fecha_hora_creacion'
+    raw_id_fields = ('report',)
+
+
+"reports_forms.txt"
+from django import forms
+from .models import Report, ConsentOrPrescription
+
+class ReportForm(forms.ModelForm):
+    class Meta:
+        model = Report
+        fields = ['appointment', 'ubicacion_gps', 'notas_novedades', 'valoracion']
+        widgets = {
+            'appointment': forms.Select(attrs={'class': 'form-control'}),
+            'ubicacion_gps': forms.URLInput(attrs={'class': 'form-control'}),
+            'notas_novedades': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'valoracion': forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'max': 5}),
+        }
+
+class ConsentOrPrescriptionForm(forms.ModelForm):
+    class Meta:
+        model = ConsentOrPrescription
+        fields = ['report', 'tipo', 'imagen_receta', 'firma_digital']
+        widgets = {
+            'report': forms.Select(attrs={'class': 'form-control'}),
+            'tipo': forms.Select(attrs={'class': 'form-control'}),
+            'imagen_receta': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'firma_digital': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+        }
+
+
+"reports_models.txt"
+#CoreApps/reports/models.py
+from django.db import models
+from django.conf import settings
+from CoreApps.appointments.models import Appointment
+from django.utils.translation import gettext_lazy as _
+
+class Report(models.Model):
+    appointment = models.OneToOneField(
+        Appointment, on_delete=models.CASCADE,
+        related_name='reporte', verbose_name=_("Cita relacionada")
+    )
+    enfermero = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL, null=True, related_name='reportes'
+    )
+    ubicacion_gps = models.URLField(
+        _("Ubicación GPS enfermero"), max_length=500,
+        help_text=_("Ubicación del enfermero durante el reporte (link de mapa)")
+    )
+    notas_novedades = models.TextField(_("Novedades de la cita"))
+    valoracion = models.PositiveSmallIntegerField(_("Valoración del servicio"), default=5)
+    fecha_hora_reporte = models.DateTimeField(_("Fecha y hora del reporte"), auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("Reporte de visita")
+        verbose_name_plural = _("Reportes de visitas")
+
+    def __str__(self):
+        return f"Reporte - {self.appointment} - {self.fecha_hora_reporte}"
+
+class ConsentOrPrescription(models.Model):
+    CONSENTIMIENTO = 'consentimiento'
+    RECETA = 'receta'
+    TIPO_CHOICES = [
+        (CONSENTIMIENTO, 'Consentimiento Informado'),
+        (RECETA, 'Receta Médica'),
+    ]
+
+    report = models.OneToOneField(
+        Report, on_delete=models.CASCADE,
+        related_name='consentimiento_o_receta', verbose_name=_("Reporte relacionado")
+    )
+    tipo = models.CharField(_("Tipo"), max_length=20, choices=TIPO_CHOICES)
+    # Para recetas médicas:
+    imagen_receta = models.ImageField(
+        _("Imagen de la receta"), upload_to='recetas/', blank=True, null=True
+    )
+    # Para consentimiento informado:
+    firma_digital = models.ImageField(
+        _("Firma digital"), upload_to='firmas/', blank=True, null=True
+    )
+    documento_generado = models.FileField(
+        _("Documento generado"), upload_to='documentos/', blank=True, null=True
+    )
+    fecha_hora_creacion = models.DateTimeField(_("Fecha y hora creación"), auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("Consentimiento o receta")
+        verbose_name_plural = _("Consentimientos y recetas")
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} - {self.report}"
+
+
+"reports_urls.txt"
+from django.urls import path
+from . import views
+
+app_name = 'reports'
+
+urlpatterns = [
+    path('', views.ReportListView.as_view(), name='report-list'),
+    path('crear/', views.ReportCreateView.as_view(), name='report-create'),
+    path('<int:pk>/detalle/', views.ReportDetailView.as_view(), name='report-detail'),
+    path('<int:pk>/editar/', views.ReportUpdateView.as_view(), name='report-update'),
+    path('<int:pk>/eliminar/', views.ReportDeleteView.as_view(), name='report-delete'),
+    path('adjuntar-documento/', views.ConsentOrPrescriptionCreateView.as_view(), name='consent-or-prescription-create'),
+
+]
+
+
+"reports_views.txt"
+from django.views.generic import ListView, CreateView, DetailView, UpdateView, DeleteView
+from django.urls import reverse_lazy
+from django.shortcuts import redirect
+from django.urls import reverse
+from django.contrib.auth.mixins import LoginRequiredMixin
+from CoreApps.appointments.models import AppointmentStatus, Appointment
+from .models import ConsentOrPrescription, Report
+from .forms import ConsentOrPrescriptionForm, ReportForm
+from django.shortcuts import redirect, get_object_or_404
+from django.views import View
+from django.shortcuts import render
+from django.http import HttpResponseRedirect
+
+
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import cm
+from datetime import datetime
+from io import BytesIO
+from django.core.files.base import ContentFile
+
+def generar_consentimiento_pdf(consentimiento_instance):
+    """
+    Genera un PDF de consentimiento y lo guarda en el campo documento_generado del consentimiento_instance.
+    """
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+
+    paciente = consentimiento_instance.report.appointment.paciente
+    cita = consentimiento_instance.report.appointment
+
+    # Datos principales
+    paciente_nombre = f"{paciente.nombres} {paciente.apellidos}"
+    paciente_cedula = paciente.cedula
+    fecha_cita = cita.horario.fecha.strftime('%d/%m/%Y') if cita.horario and cita.horario.fecha else "Fecha no registrada"
+    hora_cita = cita.hora.strftime('%H:%M') if cita.hora else "Hora no registrada"
+
+    # Título
+    c.setFont("Helvetica-Bold", 14)
+    c.drawCentredString(width / 2, height - 3*cm, "Documento de Consentimiento Informado")
+
+    # Texto
+    texto = (
+        f"Yo, {paciente_nombre}, con cédula {paciente_cedula}, "
+        f"acepto y doy mi consentimiento para el procedimiento aplicado el día {fecha_cita} "
+        f"a las {hora_cita}. Declaro que he sido informado adecuadamente y acepto de forma voluntaria."
+    )
+    c.setFont("Helvetica", 12)
+    c.drawString(3*cm, height - 5*cm, texto)
+
+    # Firma
+    if consentimiento_instance.firma_digital:
+        firma_path = consentimiento_instance.firma_digital.path
+        c.drawImage(firma_path, 3*cm, height - 14*cm, width=8*cm, preserveAspectRatio=True)
+
+    # Pie de página
+    c.setFont("Helvetica-Oblique", 10)
+    c.drawString(3*cm, 3*cm, f"Fecha de generación del documento: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+
+    c.showPage()
+    c.save()
+
+    buffer.seek(0)
+    filename = f"consentimiento_{consentimiento_instance.pk}.pdf"
+    consentimiento_instance.documento_generado.save(filename, ContentFile(buffer.read()))
+    buffer.close()
+
+class ConsentOrPrescriptionCreateView(LoginRequiredMixin, View):
+    template_name = 'main/reports/consent_or_prescription_form.html'
+
+    def get(self, request, *args, **kwargs):
+        report_id = request.GET.get('report')
+        report = get_object_or_404(Report, pk=report_id)
+        instance, created = ConsentOrPrescription.objects.get_or_create(report=report)
+        form = ConsentOrPrescriptionForm(instance=instance)
+        return render(request, self.template_name, {'form': form})
+
+    def post(self, request, *args, **kwargs):
+        report_id = request.GET.get('report')
+        report = get_object_or_404(Report, pk=report_id)
+        instance, created = ConsentOrPrescription.objects.get_or_create(report=report)
+        form = ConsentOrPrescriptionForm(request.POST, request.FILES, instance=instance)
+        if form.is_valid():
+            form.save()
+            if instance.tipo == ConsentOrPrescription.CONSENTIMIENTO:
+                generar_consentimiento_pdf(instance)
+                instance.save()
+            return redirect('reports:report-list')  # Ajusta si deseas otro destino
+        return render(request, self.template_name, {'form': form})
+
+# Lista de reportes
+class ReportListView(LoginRequiredMixin, ListView):
+    model = Report
+    template_name = 'main/reports/report_list.html'
+    context_object_name = 'reports'
+    ordering = ['-fecha_hora_reporte']
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        # si el usuario es enfermero, sólo sus propios reportes
+        if hasattr(self.request.user, 'rol') and self.request.user.rol == 'enfermero':
+            return qs.filter(enfermero=self.request.user)
+        # si no (operador o administrador), todos
+        return qs
+
+# Detalle de un reporte
+class ReportDetailView(LoginRequiredMixin, DetailView):
+    model = Report
+    template_name = 'main/reports/report_detail.html'
+    context_object_name = 'report'
+
+# Crear un reporte
+"""
+class ReportCreateView(LoginRequiredMixin, CreateView):
+    model = Report
+    form_class = ReportForm
+    template_name = 'main/reports/report_form.html'
+
+    def get_initial(self):
+        initial = super().get_initial()
+        initial['appointment'] = self.request.GET.get('appointment')
+        return initial
+
+    def form_valid(self, form):
+        form.instance.enfermero = self.request.user
+        cita = form.instance.appointment
+
+        estado_confirmado, created = AppointmentStatus.objects.get_or_create(nombre="Confirmada")
+        cita.estado = estado_confirmado
+        cita.save()
+
+        self.object = form.save()  # ← Guardas manualmente
+        return redirect(
+            reverse('reports:consent-or-prescription-create') + f'?report={self.object.pk}'
+        )
+"""
+class ReportCreateView(LoginRequiredMixin, CreateView):
+    model = Report
+    form_class = ReportForm
+    template_name = 'main/reports/report_form.html'
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        # Si es enfermero, solo sus propias citas
+        if hasattr(self.request.user, 'rol') and self.request.user.rol == 'enfermero':
+            form.fields['appointment'].queryset = Appointment.objects.filter(
+                enfermero=self.request.user
+            ).order_by('horario__fecha', 'hora')
+        # Dejar sin filtrar para operadores y admins
+        return form
+
+    def get_initial(self):
+        initial = super().get_initial()
+        # Si vienen por ?appointment=ID, precargamos ese valor
+        initial['appointment'] = self.request.GET.get('appointment')
+        return initial
+
+    def form_valid(self, form):
+        form.instance.enfermero = self.request.user
+        cita = form.instance.appointment
+
+        estado_confirmado, created = AppointmentStatus.objects.get_or_create(nombre="Confirmada")
+        cita.estado = estado_confirmado
+        cita.save()
+
+        self.object = form.save()
+        return redirect(
+            reverse('reports:consent-or-prescription-create') + f'?report={self.object.pk}'
+        )
+
+# Editar un reporte
+class ReportUpdateView(LoginRequiredMixin, UpdateView):
+    model = Report
+    form_class = ReportForm
+    template_name = 'main/reports/report_form.html'
+    success_url = reverse_lazy('reports:report-list')
+
+# Eliminar un reporte
+class ReportDeleteView(LoginRequiredMixin, DeleteView):
+    model = Report
+    template_name = 'main/reports/report_confirm_delete.html'
+    success_url = reverse_lazy('reports:report-list')
+
+
+"users_admin.txt"
+from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin
+from django.utils.translation import gettext_lazy as _
+from .models import User
+from .forms import CustomUserCreationForm, CustomUserChangeForm
+
+@admin.register(User)
+class CustomUserAdmin(UserAdmin):
+    model = User
+    add_form = CustomUserCreationForm
+    form     = CustomUserChangeForm
+
+    list_display = (
+        'email','cedula','nombres','rol',
+        'ciudad','display_zonas',
+        'profile_image_display','is_staff','is_active'
+    )
+    list_filter = ('rol','ciudad','zonas','is_staff','is_active')
+    filter_horizontal = ('groups','user_permissions','zonas')
+
+    # Volvemos a incluir todos los bloques originales, añadiendo 'zonas' donde toca
+    fieldsets = (
+        (None, {'fields': ('email','password')}),
+        (_('Información personal'), {
+            'fields': (
+                'cedula','nombres','telefono',
+                'rol','profile_image',
+                'ciudad','zonas'
+            )
+        }),
+        (_('Permisos'), {
+            'fields': (
+                'is_active','is_staff','is_superuser',
+                'groups','user_permissions'
+            )
+        }),
+        (_('Fechas importantes'), {
+            'fields': ('last_login','date_joined')
+        }),
+    )
+
+    # Para crear usuarios: email+password primero, luego info personal, luego permisos
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('email','password1','password2'),
+        }),
+        (_('Información personal'), {
+            'fields': (
+                'cedula','nombres','telefono',
+                'rol','profile_image',
+                'ciudad','zonas',
+            )
+        }),
+        (_('Permisos'), {
+            'fields': (
+                'is_active','is_staff','is_superuser',
+                'groups','user_permissions'
+            )
+        }),
+    )
+
+    search_fields = ('email','cedula','nombres','ciudad__nombre')
+    ordering = ('email',)
+
+    def display_zonas(self, obj):
+        return ", ".join(z.nombre for z in obj.zonas.all())
+    display_zonas.short_description = 'Zonas'
+
+    def profile_image_display(self, obj):
+        if obj.profile_image:
+            return f'<img src="{obj.profile_image.url}" width="50" height="50" ' \
+                   f'style="border-radius:50%;object-fit:cover;"/>'
+        return "Sin Imagen"
+    profile_image_display.short_description = 'Foto de perfil'
+    profile_image_display.allow_tags = True
+
+
+"users_forms.txt"
+from django import forms
+from django.contrib.auth.forms import UserCreationForm, UserChangeForm
+from django.utils.translation import gettext_lazy as _
+from .models import User
+
+class CustomUserCreationForm(UserCreationForm):
+    """
+    Formulario para crear nuevos usuarios con nuestro modelo personalizado.
+    """
+    class Meta:
+        model = User
+        #fields = ('email', 'cedula', 'nombres', 'telefono', 'rol')
+        fields = (
+            'email','cedula','nombres','telefono',
+            'rol','ciudad','zonas'
+        )
+        
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['email'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Correo electrónico'})
+        self.fields['cedula'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Cédula'})
+        self.fields['nombres'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Nombres completos'})
+        self.fields['telefono'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Número de teléfono'})
+        self.fields['rol'].widget.attrs.update({'class': 'form-select'})
+        self.fields['ciudad'].widget.attrs.update({'class':'form-select'})
+        self.fields['zonas'].widget.attrs.update({'class':'form-select'})
+
+class CustomUserChangeForm(UserChangeForm):
+    """
+    Formulario para actualizar usuarios con nuestro modelo personalizado.
+    """
+    class Meta:
+        model = User
+        #fields = ('email', 'cedula', 'nombres', 'telefono', 'rol')
+        fields = (
+            'email','cedula','nombres','telefono',
+            'rol','ciudad','zonas'
+        )
+        
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['email'].widget.attrs.update({'class': 'form-control'})
+        self.fields['cedula'].widget.attrs.update({'class': 'form-control'})
+        self.fields['nombres'].widget.attrs.update({'class': 'form-control'})
+        self.fields['telefono'].widget.attrs.update({'class': 'form-control'})
+        self.fields['rol'].widget.attrs.update({'class': 'form-select'})
+        self.fields['ciudad'].widget.attrs.update({'class':'form-select'})
+        self.fields['zonas'].widget.attrs.update({'class':'form-select'})
+
+"users_models.txt"
+#CoreApps/users/models.py
+from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.db import models
+from django.utils.translation import gettext_lazy as _
+from CoreApps.core.models import City, Zona
+
+class UserManager(BaseUserManager):
+    """
+    Gestor personalizado para el modelo de usuario donde el email es el identificador único
+    en lugar del nombre de usuario.
+    """
+    def create_user(self, email, password=None, **extra_fields):
+        """
+        Crea y guarda un usuario con el email y contraseña proporcionados.
+        """
+        if not email:
+            raise ValueError(_('El Email es obligatorio'))
+        email = self.normalize_email(email)
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, email, password=None, **extra_fields):
+        """
+        Crea y guarda un superusuario con el email y contraseña proporcionados.
+        """
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        extra_fields.setdefault('is_active', True)
+        extra_fields.setdefault('rol', 'operador')  # Por defecto, los superusuarios son operadores
+
+        if extra_fields.get('is_staff') is not True:
+            raise ValueError(_('Superuser debe tener is_staff=True.'))
+        if extra_fields.get('is_superuser') is not True:
+            raise ValueError(_('Superuser debe tener is_superuser=True.'))
+        return self.create_user(email, password, **extra_fields)
+
+class User(AbstractUser):
+    """
+    Modelo de usuario personalizado donde el email es el identificador único
+    para autenticación en lugar del nombre de usuario.
+    """
+    ROL_CHOICES = (
+        ('enfermero', 'Enfermero'),
+        ('operador', 'Operador'),
+        ('administrador', 'Administrador'),
+    )
+    
+    username = None  # Eliminamos el campo username
+    email = models.EmailField(_('correo electrónico'), unique=True)
+    cedula = models.CharField(_('cédula'), max_length=20, unique=True)
+    nombres = models.CharField(_('nombres completos'), max_length=100)
+    telefono = models.CharField(_('número de teléfono'), max_length=20, blank=True)
+    rol = models.CharField(_('rol'), max_length=20, choices=ROL_CHOICES, default='enfermero')
+    profile_image = models.ImageField(upload_to='profile_images/', null=True, blank=True, verbose_name=_('foto de perfil'))
+    ciudad = models.ForeignKey(City, on_delete=models.PROTECT, related_name='usuarios', blank=True, null=True) # <-- nuevo campo
+    #zona = models.ForeignKey(Zona, on_delete=models.PROTECT, related_name='enfermeros', verbose_name=_("Zona"), blank=True, null=True) 
+    zonas = models.ManyToManyField(Zona, related_name='enfermeros', verbose_name=_("Zonas"), blank=True)
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['cedula', 'nombres', 'rol']
+    
+    objects = UserManager()
+    
+    class Meta:
+        verbose_name = _('usuario')
+        verbose_name_plural = _('usuarios')
+    
+    def get_full_name(self):
+        """
+        Retorna el nombre completo del usuario.
+        """
+        return self.nombres
+        
+    def __str__(self):
+        return self.email
+
+
+"users_views.txt"
+from django.shortcuts import render
+
+# Create your views here.
+
+

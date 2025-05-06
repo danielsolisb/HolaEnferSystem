@@ -1,0 +1,213 @@
+{% extends 'main/dashboard.html' %}
+{% load widget_tweaks %}
+{% load static %}
+{% block content %}
+<div class="container mt-4">
+    <h2>{{ title }}</h2>
+    <p>{{ subtitle }}</p>
+
+    <form id="callcenter-appointment-form">
+        {% csrf_token %} {# Aunque usemos JS/JSON, bueno tenerlo por si acaso o para futuras expansiones #}
+
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="ciudad-select" class="form-label">Ciudad:</label>
+                <select id="ciudad-select" class="form-control">
+                    <option value="">Seleccione Ciudad...</option>
+                    {% for ciudad in ciudades %}
+                        <option value="{{ ciudad.id }}">{{ ciudad.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label for="zona-select" class="form-label">Zona:</label>
+                <select id="zona-select" class="form-control" disabled>
+                    <option value="">Seleccione Zona...</option>
+                </select>
+                 <div id="coverage-error" class="text-danger small mt-1" style="display: none;"></div>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Seleccione Fecha y Hora Disponible:</label>
+            <div id="calendar-placeholder" style="min-height: 400px; border: 1px solid #ccc;">
+                Cargando disponibilidad...
+            </div>
+             <div id="slot-error" class="text-danger small mt-1" style="display: none;"></div>
+            <div id="selected-slot-info" class="mt-2 fw-bold" style="display: none;"></div>
+             <input type="hidden" id="selected-date">
+             <input type="hidden" id="selected-time">
+        </div>
+
+        <div class="mb-3" id="nurse-selection-area" style="display: none;">
+             <label for="nurse-select" class="form-label">Enfermero Disponible:</label>
+             <select id="nurse-select" class="form-control">
+                 <option value="">Seleccione Enfermero...</option>
+             </select>
+              <div id="nurse-error" class="text-danger small mt-1" style="display: none;"></div>
+              <input type="hidden" id="selected-nurse-id">
+        </div>
+
+        <div class="row mb-3">
+             <div class="col-md-6">
+                <label for="service-select" class="form-label">Servicio:</label>
+                <select id="service-select" class="form-control">
+                     <option value="">Seleccione Servicio...</option>
+                     {% for service in servicios %}
+                         <option value="{{ service.id }}" data-requires-removal="{{ service.requires_removal|yesno:'true,false' }}">{{ service.nombre }}</option>
+                     {% endfor %}
+                </select>
+                 <input type="hidden" id="selected-service-id">
+                 <input type="hidden" id="service-requires-removal">
+            </div>
+            <div class="col-md-6">
+                 <label for="product-select" class="form-label">Producto (Opcional):</label>
+                 <select id="product-select" class="form-select form-control"> {# Añadido form-control si tu plantilla lo usa #}
+                      <option value="">Ninguno</option>
+                      {# --- >>> INICIO: MODIFICAR ESTE BUCLE PARA USAR 'products' <<< --- #}
+                      {% for product_item in products %} {# Cambié 'product' a 'product_item' para evitar conflicto si tienes una variable 'product' global #}
+                          <option value="{{ product_item.id }}">{{ product_item.nombre }}</option>
+                      {% endfor %}
+                      {# --- >>> FIN: MODIFICAR ESTE BUCLE <<< --- #}
+                 </select>
+                  <input type="hidden" id="selected-product-id">
+            </div>
+        </div>
+
+
+        <div id="removal-section" class="mb-3 p-3 border rounded bg-light" style="display: none;">
+            <h5>Programar Retiro</h5>
+            <div class="row">
+                <div class="col-md-6">
+                     <label for="removal-date" class="form-label">Fecha de Retiro:</label>
+                     <input type="date" id="removal-date" class="form-control">
+                </div>
+                 <div class="col-md-6">
+                     <label for="removal-time" class="form-label">Hora de Retiro:</label>
+                     <input type="time" id="removal-time" class="form-control" step="3600"> {# step=3600 for hourly #}
+                </div>
+            </div>
+             <div id="removal-error" class="text-danger small mt-1" style="display: none;"></div>
+        </div>
+
+        <div class="mb-3 p-3 border rounded">
+             <h5>Datos del Paciente</h5>
+             <div class="input-group mb-3">
+                 <input type="text" id="patient-cedula-search" class="form-control" placeholder="Buscar Cédula del Paciente...">
+                 <button class="btn btn-outline-secondary" type="button" id="search-patient-btn">Buscar/Crear</button>
+             </div>
+              <div id="patient-search-error" class="text-danger small mb-2" style="display: none;"></div>
+
+             <div id="patient-details-display" style="display: none;">
+                 <p><strong>Paciente:</strong> <span id="patient-name-display"></span></p>
+                  <input type="hidden" id="selected-patient-id">
+             </div>
+
+             <div id="create-patient-form-area" class="mt-3" style="display: none;">
+                 <h6>Nuevo Paciente</h6>
+                 <div class="row">
+                     <div class="col-md-6 mb-2"><input type="text" id="new-patient-nombres" class="form-control" placeholder="Nombres"></div>
+                     <div class="col-md-6 mb-2"><input type="text" id="new-patient-apellidos" class="form-control" placeholder="Apellidos"></div>
+                     <div class="col-md-6 mb-2"><input type="text" id="new-patient-cedula" class="form-control" placeholder="Cédula (Confirmar)" readonly></div>
+                     <div class="col-md-6 mb-2"><input type="text" id="new-patient-telefono" class="form-control" placeholder="Teléfono"></div>
+                     <div class="col-md-6 mb-2"><input type="email" id="new-patient-email" class="form-control" placeholder="Email (Opcional)"></div>
+                     <div class="col-md-6 mb-2">
+                          <select id="new-patient-ciudad" class="form-select">
+                                <option value="">Ciudad Domicilio...</option>
+                                {# Poblar ciudades #}
+                           </select>
+                      </div>
+                      <div class="col-12 mb-2"> <textarea id="new-patient-direccion" class="form-control" rows="2" placeholder="Dirección Completa Domicilio"></textarea></div>
+                      <div class="col-12 mb-2"><input type="url" id="new-patient-mapa" class="form-control" placeholder="Enlace Google Maps Domicilio (Opcional)"></div>
+                      {# Añadir Zona y Fecha Nacimiento si son obligatorios para crear #}
+                 </div>
+                 <button type="button" class="btn btn-sm btn-success" id="save-new-patient-btn">Guardar Nuevo Paciente</button>
+                 <button type="button" class="btn btn-sm btn-secondary" id="cancel-new-patient-btn">Cancelar</button>
+                  <div id="patient-create-error" class="text-danger small mt-1" style="display: none;"></div>
+             </div>
+        </div>
+
+        {# --- >>> INICIO: NUEVO SELECTOR DE ESTADO <<< --- #}
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="status-select" class="form-label">Estado Inicial Cita:</label>
+                <select id="status-select" class="form-select form-control">
+                    <option value="">Seleccione Estado...</option>
+                    {% for status in appointment_statuses %}
+                        <option value="{{ status.id }}">
+                            {{ status.nombre }}
+                        </option>
+                    {% endfor %}
+                </select>
+                {# Puedes preseleccionar 'Pendiente' si quieres un default, pero permite cambiar #}
+                {# <option value="{{ status.id }}" {% if status.nombre == "Pendiente" %}selected{% endif %}>...</option> #}
+                <input type="hidden" id="selected-status-id"> {# Para guardar el ID fácilmente con JS #}
+                 <div id="status-error" class="text-danger small mt-1" style="display: none;"></div>
+            </div>
+            {# Puedes usar la otra columna si quieres #}
+        </div>
+        {# --- >>> FIN: NUEVO SELECTOR DE ESTADO <<< --- #}
+
+        <div class="mb-3">
+             <label for="tipo-ubicacion" class="form-label">Tipo Ubicación Cita:</label>
+             <div>
+                 <input type="radio" name="tipo_ubicacion" value="domicilio" id="tipo-domicilio" class="form-check-input" checked>
+                 <label for="tipo-domicilio" class="form-check-label me-3">En Domicilio Registrado</label>
+                 <input type="radio" name="tipo_ubicacion" value="otro" id="tipo-otro" class="form-check-input">
+                 <label for="tipo-otro" class="form-check-label">Otra Ubicación</label>
+             </div>
+         </div>
+         <div id="otra-ubicacion-details" class="mb-3 p-3 border rounded bg-light" style="display: none;">
+              <h6>Detalles Otra Ubicación</h6>
+              <textarea id="ubicacion-manual" class="form-control mb-2" rows="2" placeholder="Dirección Completa de la Cita"></textarea>
+              <input type="url" id="mapa-manual" class="form-control" placeholder="Enlace Google Maps de la Cita">
+               <div id="otra-ubicacion-error" class="text-danger small mt-1" style="display: none;"></div>
+         </div>
+
+        <div class="row mb-3">
+            
+            <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="doctor-name" class="form-label">Nombre Doctor (Opcional):</label>
+                <input type="text" id="doctor-name" class="form-control">
+            </div>
+            {# --- >>> INICIO: AÑADIR CAMPO DIAGNÓSTICO <<< --- #}
+            <div class="col-md-6">
+                <label for="appointment-diagnosis" class="form-label">Diagnóstico Médico (Opcional):</label>
+                <textarea id="appointment-diagnosis" class="form-control" rows="1"></textarea>
+            </div>
+            {# --- >>> FIN: AÑADIR CAMPO DIAGNÓSTICO <<< --- #}
+        </div>
+        
+             <div class="col-md-6">
+                <label for="appointment-notes" class="form-label">Notas Adicionales:</label>
+                 <textarea id="appointment-notes" class="form-control" rows="1"></textarea>
+            </div>
+            
+        </div>
+
+
+        <div class="d-grid">
+             <button type="button" id="submit-appointment-btn" class="btn btn-primary btn-lg" disabled>Agendar Cita</button>
+        </div>
+         <div id="submit-error" class="alert alert-danger mt-3" style="display: none;"></div>
+         <div id="submit-success" class="alert alert-success mt-3" style="display: none;"></div>
+
+    </form>
+</div>
+
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script> {# Ejemplo #}
+
+    <script src="{% static 'js/callcenter_form.js' %}"></script> {# Asegúrate de crear este archivo #}
+     <script>
+         // Pasar URLs de API a JavaScript
+         const API_URLS = {
+             availability: "{% url 'appointments:callcenter-api-availability' %}",
+             getZonas: "{% url 'customers:api-obtener-zonas' %}", // Reusamos la existente
+             nursesForSlot: "{% url 'appointments:callcenter-api-nurses-for-slot' %}",
+             findCreatePatient: "{% url 'appointments:callcenter-api-find-create-patient' %}",
+             submitAppointment: "{% url 'appointments:callcenter-appointment-create' %}" // URL para el POST
+         };
+         const CSRF_TOKEN = "{{ csrf_token }}"; // Para las peticiones POST
+     </script>
+{% endblock %}

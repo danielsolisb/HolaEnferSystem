@@ -20,6 +20,14 @@ urlpatterns = [
     path('mis-citas/', views.AssignedAppointmentListView.as_view(), name='mis-citas'),
     path('mis-citas/<int:pk>/', views.AssignedAppointmentDetailView.as_view(), name='mis-citas-detail'),
 
+ # --- NUEVAS URLs para Call Center ---
+    path('callcenter/crear/', views.CallCenterAppointmentCreateView.as_view(), name='callcenter-appointment-create'),
+    path('callcenter/api/disponibilidad/', views.CallCenterAvailabilityAPIView.as_view(), name='callcenter-api-availability'),
+    path('callcenter/api/enfermeros-slot/', views.CallCenterNursesForSlotAPIView.as_view(), name='callcenter-api-nurses-for-slot'),
+    # Usaremos la API existente de customers para zonas
+    # Podríamos necesitar una para buscar/crear paciente si la existente no basta
+    path('callcenter/api/buscar-crear-paciente/', views.CallCenterFindCreatePatientAPIView.as_view(), name='callcenter-api-find-create-patient'), # Nueva API
+
 
 ]
 

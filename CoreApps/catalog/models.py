@@ -8,7 +8,13 @@ class Service(models.Model):
     descripcion = models.TextField(_("Descripción del servicio"), blank=True)
     precio = models.DecimalField(_("Precio"), max_digits=8, decimal_places=2)
     activo = models.BooleanField(_("Activo"), default=True)
-
+    # --- NUEVO CAMPO --- g 
+    requires_removal = models.BooleanField(
+        _("Requiere Cita de Retiro"),
+        default=False,
+        help_text=_("Marcar si este servicio necesita una cita de seguimiento para retiro (ej. Suero).")
+    )
+    # --- FIN NUEVO CAMPO ---
     class Meta:
         verbose_name = _("Servicio")
         verbose_name_plural = _("Servicios")

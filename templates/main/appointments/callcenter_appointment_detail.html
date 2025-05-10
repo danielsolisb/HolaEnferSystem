@@ -1,0 +1,136 @@
+{% extends 'main/dashboard.html' %}
+{% load static %}
+
+{% block page_title %}Detalle de Cita (Call Center){% endblock %}
+{% block page_header %}{{ title|default:"Detalle de Cita" }}{% endblock %}
+{% block breadcrumb_subtitle %}{{ subtitle|default:"Información Completa" }}{% endblock %}
+
+{% block content %}
+<div class="panel">
+    <div class="panel-heading">
+        <div class="panel-control">
+            <a href="{% url 'appointments:callcenter-appointment-list' %}" class="btn btn-sm btn-default btn-labeled">
+                <i class="btn-label demo-psi-left-arrow"></i> Volver al Listado
+            </a>
+            <a href="{% url 'appointments:callcenter-appointment-update' appointment.pk %}" class="btn btn-sm btn-warning btn-labeled">
+                <i class="btn-label fa fa-pencil-alt"></i> Editar Cita
+            </a>
+        </div>
+        <h3 class="panel-title">Detalle de Cita #{{ appointment.pk }}</h3>
+    </div>
+
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h4>Información del Paciente</h4>
+                <hr>
+                <dl class="dl-horizontal">
+                    <dt>Paciente:</dt>
+                    <dd>{{ appointment.paciente.nombres|default:"N/A" }} {{ appointment.paciente.apellidos|default:"" }}</dd>
+                    <dt>Cédula:</dt>
+                    <dd>{{ appointment.paciente.cedula|default:"N/A" }}</dd>
+                    <dt>Teléfono Paciente:</dt>
+                    <dd>{{ appointment.paciente.telefono|default:"N/A" }}</dd>
+                    <dt>Email Paciente:</dt>
+                    <dd>{{ appointment.paciente.email|default:"N/A" }}</dd>
+                    <dt>Dirección Paciente:</dt>
+                    <dd>{{ appointment.paciente.direccion|default:"N/A" }}</dd>
+                    {% if appointment.paciente.ubicacion_mapa %}
+                    <dt>Mapa Paciente:</dt>
+                    <dd><a href="{{ appointment.paciente.ubicacion_mapa }}" target="_blank">Ver en mapa</a></dd>
+                    {% endif %}
+                </dl>
+            </div>
+            <div class="col-md-6">
+                <h4>Información de la Cita</h4>
+                <hr>
+                <dl class="dl-horizontal">
+                    <dt>Servicio:</dt>
+                    <dd>{{ appointment.servicio.nombre|default:"N/A" }}</dd>
+                    {% if appointment.producto %}
+                    <dt>Producto Aplicado:</dt>
+                    <dd>{{ appointment.producto.nombre|default:"N/A" }}</dd>
+                    {% endif %}
+                    <dt>Fecha de Cita:</dt>
+                    <dd>{{ appointment.fecha|date:"l, d \d\e F \d\e Y"|default:"N/A" }}</dd>
+                    <dt>Hora de Cita:</dt>
+                    <dd>{{ appointment.hora|time:"h:i A"|default:"N/A" }}</dd>
+                    <dt>Enfermero Asignado:</dt>
+                    <dd>{{ appointment.enfermero.nombres|default:"No asignado" }} {{ appointment.enfermero.apellidos|default:"" }}</dd>
+                    <dt>Estado Actual:</dt>
+                    <dd>
+                        <span class="badge badge-{% if appointment.estado.nombre == 'Pendiente' %}info{% elif appointment.estado.nombre == 'Confirmada' %}primary{% elif appointment.estado.nombre == 'Realizada' %}success{% elif appointment.estado.nombre == 'Cancelada' %}danger{% else %}default{% endif %}">
+                            {{ appointment.estado.nombre|default:"N/A" }}
+                        </span>
+                    </dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="row mt-3">
+            <div class="col-md-12">
+                <h4>Detalles Adicionales y Ubicación de la Cita</h4>
+                <hr>
+                <dl class="dl-horizontal">
+                    <dt>Tipo de Ubicación:</dt>
+                    <dd>{{ appointment.get_tipo_ubicacion_display|default:"N/A" }}</dd>
+                    <dt>Dirección de la Cita:</dt>
+                    <dd>{{ appointment.ubicacion|default:"N/A" }}</dd>
+                    {% if appointment.mapa_ubicacion %}
+                    <dt>Mapa de la Cita:</dt>
+                    <dd><a href="{{ appointment.mapa_ubicacion }}" target="_blank">Ver en mapa</a></dd>
+                    {% endif %}
+                    {% if appointment.doctor_name %}
+                    <dt>Doctor que Refiere:</dt>
+                    <dd>{{ appointment.doctor_name }}</dd>
+                    {% endif %}
+                    {% if appointment.diagnosis %}
+                    <dt>Diagnóstico Médico:</dt>
+                    <dd>{{ appointment.diagnosis|linebreaksbr }}</dd>
+                    {% endif %}
+                    {% if appointment.notas %}
+                    <dt>Notas Adicionales:</dt>
+                    <dd>{{ appointment.notas|linebreaksbr }}</dd>
+                    {% endif %}
+                    <dt>Agendado por:</dt>
+                    <dd>{{ appointment.asignado_por.get_full_name|default:"Sistema" }} ({{ appointment.asignado_por.email|default:"N/A" }})</dd>
+                    <dt>Fecha de Creación:</dt>
+                    <dd>{{ appointment.fecha_creacion|date:"d/m/Y, h:i A" }}</dd>
+                    <dt>Última Modificación:</dt>
+                    <dd>{{ appointment.fecha_modifica|date:"d/m/Y, h:i A" }}</dd>
+                </dl>
+            </div>
+        </div>
+
+        {# Aquí podrías añadir una sección para el reporte si está generado #}
+        {% if appointment.reporte %}
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <h4>Reporte de Visita Asociado</h4>
+                <hr>
+                <p><a href="{% url 'reports:report-detail' appointment.reporte.pk %}" class="btn btn-info">Ver Reporte Completo</a></p>
+                <dl class="dl-horizontal">
+                    <dt>Notas/Novedades:</dt>
+                    <dd>{{ appointment.reporte.notas_novedades|truncatewords:30|linebreaksbr }}</dd>
+                    <dt>Valoración:</dt>
+                    <dd>{{ appointment.reporte.valoracion }} / 5</dd>
+                </dl>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="mt-4 text-center">
+            <a href="{% url 'appointments:callcenter-appointment-list' %}" class="btn btn-primary">Volver al Listado</a>
+            <a href="{% url 'appointments:callcenter-appointment-update' appointment.pk %}" class="btn btn-warning">Editar Cita</a>
+            <a href="{% url 'appointments:callcenter-appointment-delete' appointment.pk %}" class="btn btn-danger" onclick="return confirm('¿Está seguro de que desea eliminar esta cita?');">Eliminar Cita</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+        // Para los tooltips si tienes botones con la clase .add-tooltip
+        $('.add-tooltip').tooltip();
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends 'main/dashboard.html' %}
+{% load static %}
+
+{% block page_title %}Confirmar Eliminación{% endblock %}
+{% block page_header %}{{ title|default:"Confirmar Eliminación" }}{% endblock %}
+{% block breadcrumb_subtitle %}{{ subtitle|default:"Eliminar Cita" }}{% endblock %}
+
+{% block content %}
+<div class="panel">
+    <div class="panel-heading">
+        <h3 class="panel-title">{{ title }}</h3>
+    </div>
+    <div class="panel-body">
+        <p>¿Está seguro de que desea eliminar la siguiente cita?</p>
+        <ul>
+            <li><strong>Paciente:</strong> {{ appointment.paciente }}</li>
+            <li><strong>Servicio:</strong> {{ appointment.servicio }}</li>
+            <li><strong>Fecha:</strong> {{ appointment.fecha|date:"d/m/Y" }}</li>
+            <li><strong>Hora:</strong> {{ appointment.hora|time:"h:i A" }}</li>
+            <li><strong>Enfermero:</strong> {{ appointment.enfermero|default:"No asignado" }}</li>
+        </ul>
+
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Sí, eliminar</button>
+            <a href="{% url 'appointments:callcenter-appointment-list' %}" class="btn btn-secondary">Cancelar</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

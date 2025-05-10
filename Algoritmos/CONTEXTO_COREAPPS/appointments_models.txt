@@ -106,9 +106,9 @@ class Appointment(models.Model):
                        )
     #productos       = models.ManyToManyField(Product, blank=True, related_name='citas')  # ← NUEVO
     producto        = models.ForeignKey(Product, on_delete=models.PROTECT, verbose_name=_("Producto aplicado"), null=True, blank=True)  # ← NUEVO (null=True, blank=True)
-    doctor_name     = models.CharField(_("Doctor"), max_length=200, blank=True)
-    diagnosis       = models.TextField(_("Diagnóstico"), blank=True)
-    notas           = models.TextField(_("Notas adicionales"), blank=True)
+    doctor_name     = models.CharField(_("Doctor"), max_length=200, blank=True, null=True)
+    diagnosis       = models.TextField(_("Diagnóstico"), blank=True, null=True)
+    notas           = models.TextField(_("Notas adicionales"), blank=True, null=True)
     fecha_creacion  = models.DateTimeField(_("Creado en"), auto_now_add=True)
     fecha_modifica  = models.DateTimeField(_("Última modificación"), auto_now=True)
 

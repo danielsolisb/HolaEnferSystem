@@ -128,6 +128,23 @@
         </div>
 
         {# --- >>> INICIO: NUEVO SELECTOR DE ESTADO <<< --- #}
+        <div class="mb-3">
+             <label for="tipo-ubicacion" class="form-label">Tipo Ubicación Cita:</label>
+             <div>
+                 <input type="radio" name="tipo_ubicacion" value="domicilio" id="tipo-domicilio" class="form-check-input" checked>
+                 <label for="tipo-domicilio" class="form-check-label me-3">En Domicilio Registrado</label>
+                 <input type="radio" name="tipo_ubicacion" value="otro" id="tipo-otro" class="form-check-input">
+                 <label for="tipo-otro" class="form-check-label">Otra Ubicación</label>
+             </div>
+         </div>
+
+        <div id="otra-ubicacion-details" class="mb-3 p-3 border rounded bg-light" style="display: none;">
+              <h6>Detalles Otra Ubicación</h6>
+              <textarea id="ubicacion-manual" class="form-control mb-2" rows="2" placeholder="Dirección Completa de la Cita"></textarea>
+              <input type="url" id="mapa-manual" class="form-control" placeholder="Enlace Google Maps de la Cita">
+               <div id="otra-ubicacion-error" class="text-danger small mt-1" style="display: none;"></div>
+         </div>
+
         <div class="row mb-3">
             <div class="col-md-6">
                 <label for="status-select" class="form-label">Estado Inicial Cita:</label>
@@ -148,47 +165,30 @@
         </div>
         {# --- >>> FIN: NUEVO SELECTOR DE ESTADO <<< --- #}
 
-        <div class="mb-3">
-             <label for="tipo-ubicacion" class="form-label">Tipo Ubicación Cita:</label>
-             <div>
-                 <input type="radio" name="tipo_ubicacion" value="domicilio" id="tipo-domicilio" class="form-check-input" checked>
-                 <label for="tipo-domicilio" class="form-check-label me-3">En Domicilio Registrado</label>
-                 <input type="radio" name="tipo_ubicacion" value="otro" id="tipo-otro" class="form-check-input">
-                 <label for="tipo-otro" class="form-check-label">Otra Ubicación</label>
-             </div>
-         </div>
-         <div id="otra-ubicacion-details" class="mb-3 p-3 border rounded bg-light" style="display: none;">
-              <h6>Detalles Otra Ubicación</h6>
-              <textarea id="ubicacion-manual" class="form-control mb-2" rows="2" placeholder="Dirección Completa de la Cita"></textarea>
-              <input type="url" id="mapa-manual" class="form-control" placeholder="Enlace Google Maps de la Cita">
-               <div id="otra-ubicacion-error" class="text-danger small mt-1" style="display: none;"></div>
-         </div>
+        
+         
 
-        <div class="row mb-3">
-            
-            <div class="row mb-3">
-            <div class="col-md-6">
+     <div class="row mb-3">
+            <div class="col-md-4">
                 <label for="doctor-name" class="form-label">Nombre Doctor (Opcional):</label>
                 <input type="text" id="doctor-name" class="form-control">
             </div>
-            {# --- >>> INICIO: AÑADIR CAMPO DIAGNÓSTICO <<< --- #}
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <label for="appointment-diagnosis" class="form-label">Diagnóstico Médico (Opcional):</label>
                 <textarea id="appointment-diagnosis" class="form-control" rows="1"></textarea>
             </div>
-            {# --- >>> FIN: AÑADIR CAMPO DIAGNÓSTICO <<< --- #}
+            <div class="col-md-4">
+                <label for="appointment-notes" class="form-label">Notas Adicionales (Opcional):</label>
+                <textarea id="appointment-notes" class="form-control" rows="1"></textarea>
+            </div>
         </div>
         
-             <div class="col-md-6">
-                <label for="appointment-notes" class="form-label">Notas Adicionales:</label>
-                 <textarea id="appointment-notes" class="form-control" rows="1"></textarea>
-            </div>
             
-        </div>
+      
 
 
-        <div class="d-grid">
-             <button type="button" id="submit-appointment-btn" class="btn btn-primary btn-lg" disabled>Agendar Cita</button>
+        <div class="d-grid mt-4"> 
+            <button type="button" id="submit-appointment-btn" class="btn btn-primary btn-lg" disabled>Agendar Cita</button>
         </div>
          <div id="submit-error" class="alert alert-danger mt-3" style="display: none;"></div>
          <div id="submit-success" class="alert alert-success mt-3" style="display: none;"></div>

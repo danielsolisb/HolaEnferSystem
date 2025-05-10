@@ -1,0 +1,90 @@
+
+{% extends 'main/dashboard.html' %}
+{% load static %}
+{% load widget_tweaks %} {# Necesitas widget_tweaks si quieres usarlo para renderizar campos #}
+
+{% block page_title %}Editar Cita (Call Center){% endblock %}
+{% block page_header %}{{ title|default:"Editar Cita (Call Center)" }}{% endblock %}
+{% block breadcrumb_subtitle %}{{ subtitle|default:"Modificar Agendamiento" }}{% endblock %}
+
+{% block content %}
+<div class="panel">
+    <div class="panel-heading">
+        <h3 class="panel-title">{{ title|default:"Editar Cita" }}</h3>
+    </div>
+    <div class="panel-body">
+        <form method="post" id="callcenter-edit-form">
+            {% csrf_token %}
+
+            {# Renderizar campos del formulario AppointmentForm #}
+            {# Puedes renderizarlos manualmente o usando un bucle #}
+            <div class="row mb-3">
+                 <div class="col-md-6">
+                    <label for="{{ form.paciente.id_for_label }}" class="form-label">{{ form.paciente.label }}</label>
+                    {% render_field form.paciente class="form-control" disabled="disabled" %} {# Deshabilitado usualmente #}
+                     <small class="text-muted">No se puede cambiar el paciente al editar.</small>
+                 </div>
+                 <div class="col-md-6">
+                     <label for="{{ form.servicio.id_for_label }}" class="form-label">{{ form.servicio.label }}</label>
+                     {% render_field form.servicio class="form-control" %}
+                     {% if form.servicio.errors %}<div class="text-danger small">{{ form.servicio.errors|striptags }}</div>{% endif %}
+                 </div>
+            </div>
+
+             <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="{{ form.enfermero.id_for_label }}" class="form-label">{{ form.enfermero.label }}</label>
+                    {% render_field form.enfermero class="form-control" %}
+                     {% if form.enfermero.errors %}<div class="text-danger small">{{ form.enfermero.errors|striptags }}</div>{% endif %}
+                </div>
+                 <div class="col-md-6">
+                     <label for="{{ form.estado.id_for_label }}" class="form-label">{{ form.estado.label }}</label>
+                     {% render_field form.estado class="form-control" %}
+                      {% if form.estado.errors %}<div class="text-danger small">{{ form.estado.errors|striptags }}</div>{% endif %}
+                 </div>
+            </div>
+
+             <div class="row mb-3">
+                 <div class="col-md-6">
+                    <label for="{{ form.fecha.id_for_label }}" class="form-label">{{ form.fecha.label }}</label>
+                    {% render_field form.fecha class="form-control" type="date" %}
+                     {% if form.fecha.errors %}<div class="text-danger small">{{ form.fecha.errors|striptags }}</div>{% endif %}
+                </div>
+                 <div class="col-md-6">
+                    <label for="{{ form.hora.id_for_label }}" class="form-label">{{ form.hora.label }}</label>
+                    {% render_field form.hora class="form-control" type="time" %}
+                     {% if form.hora.errors %}<div class="text-danger small">{{ form.hora.errors|striptags }}</div>{% endif %}
+                </div>
+            </div>
+
+             <div class="row mb-3">
+                 {# ... Renderizar campos tipo_ubicacion, ubicacion, mapa_ubicacion, producto, doctor_name, diagnosis, notas ... #}
+                  <div class="col-md-6">
+                     <label for="{{ form.producto.id_for_label }}" class="form-label">{{ form.producto.label }}</label>
+                     {% render_field form.producto class="form-control" %}
+                      {% if form.producto.errors %}<div class="text-danger small">{{ form.producto.errors|striptags }}</div>{% endif %}
+                 </div>
+                  <div class="col-md-6">
+                     <label for="{{ form.doctor_name.id_for_label }}" class="form-label">{{ form.doctor_name.label }}</label>
+                     {% render_field form.doctor_name class="form-control" %}
+                      {% if form.doctor_name.errors %}<div class="text-danger small">{{ form.doctor_name.errors|striptags }}</div>{% endif %}
+                 </div>
+                 {# ... Añade el resto de campos de forma similar ... #}
+                  <div class="col-md-12 mt-2">
+                     <label for="{{ form.notas.id_for_label }}" class="form-label">{{ form.notas.label }}</label>
+                     {% render_field form.notas class="form-control" rows="3" %}
+                      {% if form.notas.errors %}<div class="text-danger small">{{ form.notas.errors|striptags }}</div>{% endif %}
+                 </div>
+
+            </div>
+
+
+            {# Botones #}
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                <a href="{% url 'appointments:callcenter-appointment-list' %}" class="btn btn-secondary">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

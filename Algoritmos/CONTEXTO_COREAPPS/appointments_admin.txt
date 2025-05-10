@@ -27,7 +27,9 @@ class AppointmentAdmin(admin.ModelAdmin):
         'estado',
         'tipo_ubicacion',  # Nuevo campo en admin
         'ubicacion',
-        'mapa_ubicacion',  # Añadido aquí también
+        'mapa_ubicacion', 
+        'doctor_name',
+        'diagnosis', # Añadido aquí también
         'asignado_por',
         'fecha_creacion',
     )
@@ -70,6 +72,8 @@ class AppointmentAdmin(admin.ModelAdmin):
                 'estado',
                 'asignado_por',
                 'notas',
+                'doctor_name',
+                'diagnosis',
             )
         }),
         (_('Tiempos'), {

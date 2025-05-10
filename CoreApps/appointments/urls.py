@@ -28,6 +28,17 @@ urlpatterns = [
     # Podríamos necesitar una para buscar/crear paciente si la existente no basta
     path('callcenter/api/buscar-crear-paciente/', views.CallCenterFindCreatePatientAPIView.as_view(), name='callcenter-api-find-create-patient'), # Nueva API
 
+ # --- NUEVAS URLs CRUD para Call Center ---
+    # Listado de Citas para Call Center
+    path('callcenter/listado/', views.CallCenterAppointmentListView.as_view(), name='callcenter-appointment-list'),
+    # Detalle de Cita para Call Center (si necesitas una vista de detalle diferente)
+    # Podrías reutilizar la original 'appointment-detail' o crear una nueva si la vista es muy distinta
+    path('callcenter/<int:pk>/detalle/', views.CallCenterAppointmentDetailView.as_view(), name='callcenter-appointment-detail'),
+    # Edición de Cita para Call Center
+    path('callcenter/<int:pk>/editar/', views.CallCenterAppointmentUpdateView.as_view(), name='callcenter-appointment-update'),
+    # Eliminación de Cita para Call Center
+    path('callcenter/<int:pk>/eliminar/', views.CallCenterAppointmentDeleteView.as_view(), name='callcenter-appointment-delete'),
+
 
 ]
 

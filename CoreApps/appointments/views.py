@@ -469,7 +469,6 @@ class CallCenterNursesForSlotAPIView(LoginRequiredMixin, View):
 
         return JsonResponse(available_nurses_details, safe=False)
 
-# En appointments/views.py
 class CallCenterFindCreatePatientAPIView(LoginRequiredMixin, View):
     def post(self, request, *args, **kwargs):
         try:
@@ -535,7 +534,6 @@ class CallCenterFindCreatePatientAPIView(LoginRequiredMixin, View):
             # Loggear el error 'e'
             print(f"Error en CallCenterFindCreatePatientAPIView: {e}")
             return JsonResponse({'error': 'Ocurrió un error interno en el servidor.'}, status=500)
-
 
 class CallCenterAppointmentCreateView(LoginRequiredMixin, View):
     template_name = 'main/appointments/callcenter_create_form.html'
@@ -707,3 +705,73 @@ class CallCenterAppointmentCreateView(LoginRequiredMixin, View):
             import traceback
             traceback.print_exc()
             return JsonResponse({'status': 'error', 'message': 'Ocurrió un error interno inesperado. Revise los logs del servidor.'}, status=500)
+
+
+
+class CallCenterAppointmentListView(LoginRequiredMixin, ListView):
+    model = Appointment
+    template_name = 'main/appointments/callcenter_appointment_list.html' # Nueva plantilla para la lista
+    context_object_name = 'appointments'
+    paginate_by = 15 # Paginación opcional
+
+    def get_queryset(self):
+        # Puedes tener un queryset diferente para el call center si es necesario
+        # Por ahora, usamos el mismo que la lista general, optimizado
+        return Appointment.objects.select_related(
+            'paciente', 'servicio', 'enfermero', 'estado', 'horario'
+        ).prefetch_related(
+            'producto'
+        ).order_by('-fecha', '-hora')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = "Listado Citas (Call Center)"
+        context['subtitle'] = "Gestión de Citas Agendadas"
+        # Puedes añadir filtros específicos del call center aquí si es necesario
+        return context
+
+# Si necesitas una vista de Detalle específica para el Call Center (opcional)
+class CallCenterAppointmentDetailView(LoginRequiredMixin, DetailView):
+    model = Appointment
+    template_name = 'main/appointments/callcenter_appointment_detail.html' # Nueva plantilla detalle
+    context_object_name = 'appointment'
+    # ... (puedes añadir contexto específico) ...
+
+class CallCenterAppointmentUpdateView(LoginRequiredMixin, UpdateView):
+    model = Appointment
+    form_class = AppointmentForm # Puedes usar el form original o crear uno específico si es necesario
+    template_name = 'main/appointments/callcenter_appointment_form_edit.html' # Nueva plantilla para editar
+    # O podrías reutilizar 'main/appointments/appointment_form1.html' si es adecuado
+
+    # Redirigir a la lista del call center después de editar
+    success_url = reverse_lazy('appointments:callcenter-appointment-list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = "Editar Cita (Call Center)"
+        context['subtitle'] = "Modificar datos de agendamiento"
+        context['is_edit_mode'] = True # Flag para la plantilla, si es necesario
+        # Podrías necesitar añadir aquí lógica similar a la AppointmentUpdateView original
+        # para pre-cargar datos iniciales para selects dinámicos si reutilizas ese tipo de formulario.
+        # Por simplicidad, aquí usamos el AppointmentForm básico. Si necesitas la lógica
+        # dinámica del formulario de creación (APIs, etc.) al editar, esta vista
+        # debería heredar de View y reimplementar GET y POST como CallCenterAppointmentCreateView
+        # pero cargando el objeto existente. ¡Esto es más complejo!
+        return context
+
+    def form_valid(self, form):
+        # Puedes añadir lógica aquí antes de guardar si es necesario
+        return super().form_valid(form)
+
+
+class CallCenterAppointmentDeleteView(LoginRequiredMixin, DeleteView):
+    model = Appointment
+    template_name = 'main/appointments/callcenter_appointment_confirm_delete.html' # Nueva plantilla confirmación
+    # Redirigir a la lista del call center después de eliminar
+    success_url = reverse_lazy('appointments:callcenter-appointment-list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = "Eliminar Cita (Call Center)"
+        context['subtitle'] = f"Confirmar eliminación de cita para {self.object.paciente}"
+        return context
